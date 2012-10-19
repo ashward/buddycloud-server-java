@@ -10,8 +10,6 @@ import org.buddycloud.channelserver.db.exception.NodeStoreException;
 import org.buddycloud.channelserver.federation.AsyncCall;
 import org.buddycloud.channelserver.federation.AsyncCall.ResultHandler;
 import org.buddycloud.channelserver.federation.ServiceDiscoveryRegistry;
-import org.buddycloud.channelserver.federation.requests.pubsub.GetNodeItems;
-import org.buddycloud.channelserver.federation.requests.pubsub.NodeExists;
 import org.buddycloud.channelserver.pubsub.affiliation.Affiliations;
 import org.buddycloud.channelserver.pubsub.model.NodeAffiliation;
 import org.buddycloud.channelserver.pubsub.model.NodeItem;
@@ -22,10 +20,10 @@ import org.xmpp.packet.JID;
 public class FederatedChannelManager implements ChannelManager {
 
 	private final ChannelManager delegate;
-	private final XMPPConnection xmppConnection;
-	private final ServiceDiscoveryRegistry discoveryRegistry;
 	private final OperationsFactory operations;
 	private Parameters requestParameters;
+	
+	private int timeoutMillis = 60000;
 	
 	private static final Logger logger = Logger.getLogger(FederatedChannelManager.class);
 
@@ -33,9 +31,15 @@ public class FederatedChannelManager implements ChannelManager {
 			final XMPPConnection xmppConnection,
 			final ServiceDiscoveryRegistry discoveryRegistry, final OperationsFactory operationsFactory) {
 		this.delegate = delgate;
-		this.xmppConnection = xmppConnection;
-		this.discoveryRegistry = discoveryRegistry;
 		this.operations = operationsFactory;
+	}
+	
+	/**
+	 * Sets the number of milliseconds to wait before timing out an asyncronous call.
+	 * @param millis the number of milliseconds.
+	 */
+	public void setTimeoutMillis(final int millis) {
+		this.timeoutMillis = millis;
 	}
 
 	@Override
@@ -204,6 +208,52 @@ public class FederatedChannelManager implements ChannelManager {
 	public Parameters getRequestParameters() {
 		return requestParameters;
 	}
+	
+	/**
+	 * Takes an {@link AsyncCall} by calling {@link AsyncCall#call(ResultHandler)} and runs it synchronously - blocking
+	 * until it has completed.
+	 * @param operation the {@link AsyncCall} to run.
+	 * @return the result of the call.
+	 * @throws NodeStoreException if something went wrong.
+	 */
+	private <T extends AsyncCall<K>, K> K runSynchronously(final T operation) throws NodeStoreException {
+		final ObjectHolder<K> result = new ObjectHolder<K>();
+		final ObjectHolder<Throwable> error = new ObjectHolder<Throwable>();
+
+		final Thread thread = Thread.currentThread();
+
+		operation.call(new ResultHandler<K>() {
+
+			@Override
+			public void onSuccess(final K data) {
+				result.set(data);
+				thread.interrupt();
+			}
+
+			@Override
+			public void onError(final Throwable t) {
+				error.set(t);
+				thread.interrupt();
+			}
+		});
+
+		try {
+			Thread.sleep(timeoutMillis);
+		} catch (InterruptedException e) {
+			if (result.get() != null) {
+				return result.get();
+			}
+
+			if (error.get() instanceof NodeStoreException) {
+				throw (NodeStoreException) error.get();
+			} else {
+				throw new NodeStoreException("Unexpected error caught",
+						error.get());
+			}
+		}
+		throw new NodeStoreException("Timed out");
+		
+	}
 
 	/**
 	 * Holds a reference to an object. This is used to pass objects from an inner class method to the outer class.
@@ -219,51 +269,5 @@ public class FederatedChannelManager implements ChannelManager {
 		public void set(final T obj) {
 			this.obj = obj;
 		}
-	}
-	
-	/**
-	 * Runs an {@link AsyncCall} by calling {@link AsyncCall#call(ResultHandler)} and runs it synchronously - blocking
-	 * until it has completed.
-	 * @param operation the {@link AsyncCall} to run.
-	 * @return the result of the call.
-	 * @throws NodeStoreException if something went wrong.
-	 */
-	private <T extends AsyncCall<K>, K> K runSynchronously(final T operation) throws NodeStoreException {
-		final ObjectHolder<K> result = new ObjectHolder<K>();
-		final ObjectHolder<Throwable> error = new ObjectHolder<Throwable>();
-
-		final Thread thread = Thread.currentThread();
-
-		operation.call(new ResultHandler<K>() {
-
-			@Override
-			public void onSuccess(K data) {
-				result.set(data);
-				thread.interrupt();
-			}
-
-			@Override
-			public void onError(Throwable t) {
-				error.set(t);
-				thread.interrupt();
-			}
-		});
-
-		try {
-			Thread.sleep(60000);
-		} catch (InterruptedException e) {
-			if (result.get() != null) {
-				return result.get();
-			}
-
-			if (error.get() instanceof NodeStoreException) {
-				throw (NodeStoreException) error.get();
-			} else {
-				throw new NodeStoreException("Unexpected error caught",
-						error.get());
-			}
-		}
-		throw new NodeStoreException("Timed out");
-		
 	}
 }
