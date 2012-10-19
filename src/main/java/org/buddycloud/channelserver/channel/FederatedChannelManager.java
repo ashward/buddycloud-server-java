@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import org.buddycloud.channelserver.connection.XMPPConnection;
 import org.buddycloud.channelserver.db.CloseableIterator;
 import org.buddycloud.channelserver.db.exception.NodeStoreException;
+import org.buddycloud.channelserver.federation.AsyncCall;
 import org.buddycloud.channelserver.federation.AsyncCall.ResultHandler;
 import org.buddycloud.channelserver.federation.ServiceDiscoveryRegistry;
 import org.buddycloud.channelserver.federation.requests.pubsub.GetNodeItems;
@@ -71,50 +72,13 @@ public class FederatedChannelManager implements ChannelManager {
 
 	@Override
 	public boolean nodeExists(String nodeId) throws NodeStoreException {
-		final ObjectHolder<Boolean> result = new ObjectHolder<Boolean>();
-		final ObjectHolder<Throwable> error = new ObjectHolder<Throwable>();
-
-		NodeExists nodeExists = operations.nodeExists(nodeId);
-
-		final Thread thread = Thread.currentThread();
-
-		nodeExists.call(new ResultHandler<Boolean>() {
-
-			@Override
-			public void onSuccess(Boolean exists) {
-				result.set(exists);
-				thread.interrupt();
-			}
-
-			@Override
-			public void onError(Throwable t) {
-				error.set(t);
-				thread.interrupt();
-			}
-		});
-
-		try {
-			Thread.sleep(60000);
-		} catch (InterruptedException e) {
-			if (result.get() != null) {
-				return result.get();
-			}
-
-			if (error.get() instanceof NodeStoreException) {
-				throw (NodeStoreException) error.get();
-			} else {
-				throw new NodeStoreException("Unexpected error caught",
-						error.get());
-			}
-		}
-		throw new NodeStoreException("Timed out");
+		return runSynchronously(operations.nodeExists(nodeId));
 	}
 
 	@Override
 	public void setUserAffiliation(String nodeId, JID user,
 			Affiliations affiliation) throws NodeStoreException {
 		delegate.setUserAffiliation(nodeId, user, affiliation);
-
 	}
 
 	@Override
@@ -136,7 +100,6 @@ public class FederatedChannelManager implements ChannelManager {
 			throws NodeStoreException {
 		// TODO Auto-generated method stub
 		return delegate.getUserAffiliations(user);
-*/
 	}
 
 	@Override
@@ -170,43 +133,7 @@ public class FederatedChannelManager implements ChannelManager {
 	@Override
 	public CloseableIterator<NodeItem> getNodeItems(String nodeId,
 			String afterItemId, int count) throws NodeStoreException {
-		final ObjectHolder<CloseableIterator<NodeItem>> result = new ObjectHolder<CloseableIterator<NodeItem>>();
-		final ObjectHolder<Throwable> error = new ObjectHolder<Throwable>();
-
-		GetNodeItems getNodeItems = operations.getNodeItems(nodeId);
-
-		final Thread thread = Thread.currentThread();
-
-		getNodeItems.call(new ResultHandler<CloseableIterator<NodeItem>>() {
-
-			@Override
-			public void onSuccess(CloseableIterator<NodeItem> items) {
-				result.set(items);
-				thread.interrupt();
-			}
-
-			@Override
-			public void onError(Throwable t) {
-				error.set(t);
-				thread.interrupt();
-			}
-		});
-
-		try {
-			Thread.sleep(60000);
-		} catch (InterruptedException e) {
-			if (result.get() != null) {
-				return result.get();
-			}
-
-			if (error.get() instanceof NodeStoreException) {
-				throw (NodeStoreException) error.get();
-			} else {
-				throw new NodeStoreException("Unexpected error caught",
-						error.get());
-			}
-		}
-		throw new NodeStoreException("Timed out");
+		return runSynchronously(operations.getNodeItems(nodeId));
 	}
 
 	@Override
@@ -292,5 +219,51 @@ public class FederatedChannelManager implements ChannelManager {
 		public void set(final T obj) {
 			this.obj = obj;
 		}
+	}
+	
+	/**
+	 * Runs an {@link AsyncCall} by calling {@link AsyncCall#call(ResultHandler)} and runs it synchronously - blocking
+	 * until it has completed.
+	 * @param operation the {@link AsyncCall} to run.
+	 * @return the result of the call.
+	 * @throws NodeStoreException if something went wrong.
+	 */
+	private <T extends AsyncCall<K>, K> K runSynchronously(final T operation) throws NodeStoreException {
+		final ObjectHolder<K> result = new ObjectHolder<K>();
+		final ObjectHolder<Throwable> error = new ObjectHolder<Throwable>();
+
+		final Thread thread = Thread.currentThread();
+
+		operation.call(new ResultHandler<K>() {
+
+			@Override
+			public void onSuccess(K data) {
+				result.set(data);
+				thread.interrupt();
+			}
+
+			@Override
+			public void onError(Throwable t) {
+				error.set(t);
+				thread.interrupt();
+			}
+		});
+
+		try {
+			Thread.sleep(60000);
+		} catch (InterruptedException e) {
+			if (result.get() != null) {
+				return result.get();
+			}
+
+			if (error.get() instanceof NodeStoreException) {
+				throw (NodeStoreException) error.get();
+			} else {
+				throw new NodeStoreException("Unexpected error caught",
+						error.get());
+			}
+		}
+		throw new NodeStoreException("Timed out");
+		
 	}
 }
