@@ -49,6 +49,24 @@ public class Configuration extends Properties
     	return conf.getProperty(key, defaultValue);
     }
     
+    public Integer getIntegerProperty(String key, Integer defaultValue) {
+    	String value = conf.getProperty(key);
+    	
+    	if(value != null) {
+    		try {
+    			return new Integer(value);
+    		} catch(NumberFormatException e) {
+    			return defaultValue;
+    		}
+    	}
+    	
+		return defaultValue;
+    }
+    
+    public Integer getIntegerProperty(String key) {
+    	return this.getIntegerProperty(key, null);
+    }
+    
     public void load(InputStream inputStream) throws IOException
     {
         conf.load(inputStream);

@@ -1,11 +1,9 @@
 package org.buddycloud.channelserver;
 
-import java.util.Properties;
-
 import org.jivesoftware.whack.ExternalComponentManager;
-import org.xmpp.component.ComponentException;
 import org.logicalcobwebs.proxool.ProxoolException;
 import org.logicalcobwebs.proxool.configuration.PropertyConfigurator;
+import org.xmpp.component.ComponentException;
 
 public class XmppComponent {
 
@@ -16,9 +14,9 @@ public class XmppComponent {
 	
 	private String domainName;
 	private String password;
-	private Properties conf;
+	private Configuration conf;
 	
-	public XmppComponent(Properties conf) {
+	public XmppComponent(Configuration conf) {
 	    setConf(conf);
 		hostname = conf.getProperty("xmpp.host");
 		socket = Integer.valueOf(conf.getProperty("xmpp.port"));
@@ -34,7 +32,7 @@ public class XmppComponent {
 		
 	}
 	
-	public void setConf(Properties conf) {
+	public void setConf(Configuration conf) {
 		this.conf = conf;
 	}
 	

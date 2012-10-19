@@ -9,12 +9,12 @@ import org.buddycloud.channelserver.federation.ServiceDiscoveryRegistry;
 
 public class ChannelManagerFactoryImpl implements ChannelManagerFactory {
 
-	private final Properties configuration;
+	private final Configuration configuration;
 	private final NodeStoreFactory nodeStoreFactory;
 	private final XMPPConnection connection;
 	private final ServiceDiscoveryRegistry registry;
 
-	public ChannelManagerFactoryImpl(final Properties configuration,
+	public ChannelManagerFactoryImpl(final Configuration configuration,
 			final NodeStoreFactory nodeStoreFactory,
 			final XMPPConnection connection,
 			final ServiceDiscoveryRegistry registry) {
@@ -31,7 +31,12 @@ public class ChannelManagerFactoryImpl implements ChannelManagerFactory {
 
 		OperationsFactory operations = new OperationsFactory(registry, connection, localDataStore);
 		
-		return new FederatedChannelManager(localDataStore, connection,
+		FederatedChannelManager channelManager = new FederatedChannelManager(localDataStore, connection,
 				registry, operations);
+		
+		
+		channelManager.setTimeoutMillis(configuration.getIntegerProperty(Configuration.CONFIGURATION_REMOTE_TIMEOUT, 60000));
+		
+		return channelManager;
 	}
 }

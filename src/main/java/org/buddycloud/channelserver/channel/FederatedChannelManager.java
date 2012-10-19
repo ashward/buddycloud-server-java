@@ -22,21 +22,26 @@ public class FederatedChannelManager implements ChannelManager {
 	private final ChannelManager delegate;
 	private final OperationsFactory operations;
 	private Parameters requestParameters;
-	
+
 	private int timeoutMillis = 60000;
-	
-	private static final Logger logger = Logger.getLogger(FederatedChannelManager.class);
+
+	private static final Logger logger = Logger
+			.getLogger(FederatedChannelManager.class);
 
 	public FederatedChannelManager(final ChannelManager delgate,
 			final XMPPConnection xmppConnection,
-			final ServiceDiscoveryRegistry discoveryRegistry, final OperationsFactory operationsFactory) {
+			final ServiceDiscoveryRegistry discoveryRegistry,
+			final OperationsFactory operationsFactory) {
 		this.delegate = delgate;
 		this.operations = operationsFactory;
 	}
-	
+
 	/**
-	 * Sets the number of milliseconds to wait before timing out an asyncronous call.
-	 * @param millis the number of milliseconds.
+	 * Sets the number of milliseconds to wait before timing out an asyncronous
+	 * call.
+	 * 
+	 * @param millis
+	 *            the number of milliseconds.
 	 */
 	public void setTimeoutMillis(final int millis) {
 		this.timeoutMillis = millis;
@@ -208,15 +213,20 @@ public class FederatedChannelManager implements ChannelManager {
 	public Parameters getRequestParameters() {
 		return requestParameters;
 	}
-	
+
 	/**
-	 * Takes an {@link AsyncCall} by calling {@link AsyncCall#call(ResultHandler)} and runs it synchronously - blocking
-	 * until it has completed.
-	 * @param operation the {@link AsyncCall} to run.
+	 * Takes an {@link AsyncCall} by calling
+	 * {@link AsyncCall#call(ResultHandler)} and runs it synchronously -
+	 * blocking until it has completed.
+	 * 
+	 * @param operation
+	 *            the {@link AsyncCall} to run.
 	 * @return the result of the call.
-	 * @throws NodeStoreException if something went wrong.
+	 * @throws NodeStoreException
+	 *             if something went wrong.
 	 */
-	private <T extends AsyncCall<K>, K> K runSynchronously(final T operation) throws NodeStoreException {
+	private <T extends AsyncCall<K>, K> K runSynchronously(final T operation)
+			throws NodeStoreException {
 		final ObjectHolder<K> result = new ObjectHolder<K>();
 		final ObjectHolder<Throwable> error = new ObjectHolder<Throwable>();
 
@@ -252,20 +262,23 @@ public class FederatedChannelManager implements ChannelManager {
 			}
 		}
 		throw new NodeStoreException("Timed out");
-		
+
 	}
 
 	/**
-	 * Holds a reference to an object. This is used to pass objects from an inner class method to the outer class.
-	 * @param <T> the type of the object to hold.
+	 * Holds a reference to an object. This is used to pass objects from an
+	 * inner class method to the outer class.
+	 * 
+	 * @param <T>
+	 *            the type of the object to hold.
 	 */
 	private class ObjectHolder<T> {
 		private T obj;
-		
+
 		public T get() {
 			return obj;
 		}
-		
+
 		public void set(final T obj) {
 			this.obj = obj;
 		}

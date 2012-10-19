@@ -1,6 +1,5 @@
 package org.buddycloud.channelserver;
 
-import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -8,7 +7,6 @@ import org.apache.log4j.Logger;
 import org.buddycloud.channelserver.channel.ChannelManagerFactory;
 import org.buddycloud.channelserver.channel.ChannelManagerFactoryImpl;
 import org.buddycloud.channelserver.connection.ComponentXMPPConnection;
-import org.buddycloud.channelserver.connection.iq.IQRequestProcessor;
 import org.buddycloud.channelserver.db.DefaultNodeStoreFactoryImpl;
 import org.buddycloud.channelserver.db.NodeStoreFactory;
 import org.buddycloud.channelserver.db.exception.NodeStoreException;
@@ -33,9 +31,9 @@ public class ChannelsEngine implements Component {
 	
 	private ComponentXMPPConnection xmppConnection;
 	
-	private Properties conf;
+	private Configuration conf;
 	
-	public ChannelsEngine(Properties conf) {
+	public ChannelsEngine(Configuration conf) {
 		this.conf = conf;
 		xmppConnection = new ComponentXMPPConnection(outQueue);
 	}
@@ -64,7 +62,7 @@ public class ChannelsEngine implements Component {
 		} catch (NodeStoreException e) {
 			throw new ComponentException(e);
 		}
-		ServiceDiscoveryRegistry registry = new ServiceDiscoveryRegistry(xmppConnection, Configuration.getInstance());
+		ServiceDiscoveryRegistry registry = new ServiceDiscoveryRegistry(xmppConnection, conf);
 		
 		ChannelManagerFactory channelManagerFactory = new ChannelManagerFactoryImpl(
 				conf, nodeStoreFactory, xmppConnection, registry
