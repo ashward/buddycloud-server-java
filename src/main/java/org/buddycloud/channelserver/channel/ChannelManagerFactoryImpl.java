@@ -1,7 +1,5 @@
 package org.buddycloud.channelserver.channel;
 
-import java.util.Properties;
-
 import org.buddycloud.channelserver.Configuration;
 import org.buddycloud.channelserver.connection.XMPPConnection;
 import org.buddycloud.channelserver.db.NodeStoreFactory;

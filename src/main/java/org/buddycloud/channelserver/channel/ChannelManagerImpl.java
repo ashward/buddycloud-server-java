@@ -235,7 +235,6 @@ public class ChannelManagerImpl implements ChannelManager {
 
 	@Override
 	public Parameters getRequestParameters() {
-		// TODO Auto-generated method stub
-		return null;
+		return requestParameters;
 	}
 }

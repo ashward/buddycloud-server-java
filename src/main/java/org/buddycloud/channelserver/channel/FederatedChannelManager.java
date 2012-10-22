@@ -25,7 +25,7 @@ public class FederatedChannelManager implements ChannelManager {
 
 	private int timeoutMillis = 60000;
 
-	private static final Logger logger = Logger
+	private static final Logger LOGGER = Logger
 			.getLogger(FederatedChannelManager.class);
 
 	public FederatedChannelManager(final ChannelManager delgate,
@@ -229,25 +229,47 @@ public class FederatedChannelManager implements ChannelManager {
 			throws NodeStoreException {
 		final ObjectHolder<K> result = new ObjectHolder<K>();
 		final ObjectHolder<Throwable> error = new ObjectHolder<Throwable>();
+		
+		// This is a semaphore to tell the inner handler that the outer has timed out.
+		final ObjectHolder<Boolean> timedOut = new ObjectHolder<Boolean>();
+		timedOut.set(false);
 
 		final Thread thread = Thread.currentThread();
 
-		operation.call(new ResultHandler<K>() {
-
-			@Override
-			public void onSuccess(final K data) {
-				result.set(data);
-				thread.interrupt();
-			}
-
-			@Override
-			public void onError(final Throwable t) {
-				error.set(t);
-				thread.interrupt();
-			}
-		});
-
+		if(LOGGER.isDebugEnabled()) {
+			LOGGER.debug("Calling operation of type " + operation.getClass() + ": [" + operation.toString() + "]");
+		}
+		
 		try {
+			operation.call(new ResultHandler<K>() {
+	
+				@Override
+				public void onSuccess(final K data) {
+					if(LOGGER.isDebugEnabled()) {
+						LOGGER.debug("Successfully received data from the AsyncCall");
+					}
+					result.set(data);
+
+					// If Thread.sleep has timed out then we don't want to interrupt the thread
+					if(!timedOut.get() && (thread.getState() == Thread.State.TIMED_WAITING)) {
+						thread.interrupt();
+					}
+				}
+	
+				@Override
+				public void onError(final Throwable t) {
+					if(LOGGER.isDebugEnabled()) {
+						LOGGER.debug("Got an error from the AsyncCall", t);
+					}
+					error.set(t);
+
+					// If Thread.sleep has timed out then we don't want to interrupt the thread
+					if(!timedOut.get() && (thread.getState() == Thread.State.TIMED_WAITING)) {
+						thread.interrupt();
+					}
+				}
+			});
+	
 			Thread.sleep(timeoutMillis);
 		} catch (InterruptedException e) {
 			if (result.get() != null) {
@@ -260,6 +282,8 @@ public class FederatedChannelManager implements ChannelManager {
 				throw new NodeStoreException("Unexpected error caught",
 						error.get());
 			}
+		} finally {
+			timedOut.set(true);
 		}
 		throw new NodeStoreException("Timed out");
 

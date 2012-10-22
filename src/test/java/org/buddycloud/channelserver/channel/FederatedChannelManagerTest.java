@@ -9,9 +9,11 @@ import org.buddycloud.channelserver.db.exception.NodeStoreException;
 import org.buddycloud.channelserver.federation.ServiceDiscoveryRegistry;
 import org.buddycloud.channelserver.federation.AsyncCall.ResultHandler;
 import org.buddycloud.channelserver.federation.requests.pubsub.GetNodeItems;
+import org.buddycloud.channelserver.federation.requests.pubsub.NodeExists;
 import org.buddycloud.channelserver.pubsub.model.NodeItem;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -46,6 +48,16 @@ public class FederatedChannelManagerTest {
 		MockitoAnnotations.initMocks(this);
 		federatedChannelManager = new FederatedChannelManager(channelManager,
 				xmppConnection, discoveryRegistry, operations);
+		federatedChannelManager.setTimeoutMillis(60000);
+	}
+	
+	@After
+	public void tearDown() throws Exception {
+		federatedChannelManager = null;
+		channelManager = null;
+		xmppConnection = null;
+		discoveryRegistry = null;
+		operations = null;
 	}
 
 	@Test
@@ -64,7 +76,7 @@ public class FederatedChannelManagerTest {
 		
 		CloseableIterator<NodeItem> result = federatedChannelManager.getNodeItems(TEST_REMOTE_NODE_ID);
 		
-		assertSame(expected, result);
+		assertEquals(expected, result);
 	}
 
 	@Test(expected=NodeStoreException.class)
@@ -81,6 +93,59 @@ public class FederatedChannelManagerTest {
 		});
 		
 		federatedChannelManager.getNodeItems(TEST_REMOTE_NODE_ID);
+	}
+
+	@Test(expected=NodeStoreException.class)
+	public void testGetNodeItemsStringTimeout() throws Exception {
+		@SuppressWarnings("unchecked")
+		final CloseableIterator<NodeItem> expected = mock(CloseableIterator.class);
+		
+		federatedChannelManager.setTimeoutMillis(5);
+		
+		when(operations.getNodeItems(TEST_REMOTE_NODE_ID)).thenReturn(new GetNodeItems(discoveryRegistry, xmppConnection, TEST_REMOTE_NODE_ID, channelManager) {
+
+			@Override
+			public void call(final ResultHandler<CloseableIterator<NodeItem>> handler) {
+				scheduleSuccess(handler, expected);
+			}
+			
+		});
+		
+		federatedChannelManager.getNodeItems(TEST_REMOTE_NODE_ID);
+	}
+	
+	@Test
+	public void testNodeExists() throws Exception {
+		final Boolean expected = new Boolean(true);
+		
+		when(operations.nodeExists(TEST_REMOTE_NODE_ID)).thenReturn(new NodeExists(discoveryRegistry, xmppConnection, TEST_REMOTE_NODE_ID, channelManager) {
+
+			@Override
+			public void call(final ResultHandler<Boolean> handler) {
+				scheduleSuccess(handler, expected);
+			}
+			
+		});
+		
+		Boolean result = federatedChannelManager.nodeExists(TEST_REMOTE_NODE_ID);
+		
+		assertEquals(expected, result);
+	}
+
+	@Test(expected=NodeStoreException.class)
+	public void testNodeExistsFailure() throws Exception {
+		final Throwable expected = mock(Throwable.class);
+		
+		when(operations.nodeExists(TEST_REMOTE_NODE_ID)).thenReturn(new NodeExists(discoveryRegistry, xmppConnection, TEST_REMOTE_NODE_ID, channelManager) {
+
+			@Override
+			public void call(final ResultHandler<Boolean> handler) {
+				scheduleFailure(handler, expected);
+			}
+			
+		});
+		
+		federatedChannelManager.nodeExists(TEST_REMOTE_NODE_ID);
 	}
 	
 	private <T> void scheduleSuccess(final ResultHandler<T> handler, final T toReturn) {
