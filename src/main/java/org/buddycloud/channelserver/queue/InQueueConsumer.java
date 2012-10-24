@@ -42,51 +42,61 @@ public class InQueueConsumer extends QueueConsumer {
 	}
 
 	@Override
-	protected void consume(Packet p) {
-		ChannelManager channelManager = null;
-		try {
-			Long start = System.currentTimeMillis();
+	protected void consume(final Packet p) {
+		// TODO Remove this and make everything properly asyncronous
+		Thread t = new Thread() {
+			public void run() {
+				ChannelManager channelManager = null;
+				try {
+					Long start = System.currentTimeMillis();
 
-			String xml = p.toXML();
-			LOGGER.debug("Received payload: '" + xml + "'.");
+					String xml = p.toXML();
+					LOGGER.debug("Received payload: '" + xml + "'.");
 
-			channelManager = channelManagerFactory.create();
-            channelManager.setRequestParameters(getRequestParameters(p));
-			
-			if (p instanceof IQ) {
-				new IQProcessor(outQueue, conf, channelManager).process((IQ) p);
-			} else if (p instanceof Message) {
-				new MessageProcessor(outQueue, inQueue, conf, channelManager)
-						.process((Message) p);
-			} else {
-				LOGGER.info("Not handling following stanzas yet: '" + xml
-						+ "'.");
+					channelManager = channelManagerFactory.create();
+					channelManager
+							.setRequestParameters(getRequestParameters(p));
+
+					if (p instanceof IQ) {
+						new IQProcessor(outQueue, conf, channelManager)
+								.process((IQ) p);
+					} else if (p instanceof Message) {
+						new MessageProcessor(outQueue, inQueue, conf,
+								channelManager).process((Message) p);
+					} else {
+						LOGGER.info("Not handling following stanzas yet: '"
+								+ xml + "'.");
+					}
+
+					packetReceiver.packetReceived(p);
+
+					LOGGER.debug("Payload handled in '"
+							+ Long.toString((System.currentTimeMillis() - start))
+							+ "' milliseconds.");
+
+				} catch (Exception e) {
+					LOGGER.debug("Exception: " + e.getMessage(), e);
+				} finally {
+					try {
+						channelManager.close();
+					} catch (NodeStoreException e) {
+						LOGGER.error(
+								"Error encountered while closing channel manager",
+								e);
+					}
+				}
 			}
+		};
+		
+		t.run();
 
-			packetReceiver.packetReceived(p);
-
-			LOGGER.debug("Payload handled in '"
-					+ Long.toString((System.currentTimeMillis() - start))
-					+ "' milliseconds.");
-
-		} catch (Exception e) {
-			LOGGER.debug("Exception: " + e.getMessage(), e);
-		} finally {
-			try {
-				channelManager.close();
-			} catch (NodeStoreException e) {
-				LOGGER.error("Error encountered while closing channel manager",
-						e);
-			}
-		}
 	}
 
 	private Parameters getRequestParameters(Packet p) {
 		Parameters parameters = new Parameters();
 		parameters.setRequester(p.getFrom());
-		parameters
-				.setTopicsDomain(conf
-						.getProperty(Configuration.CONFIGURATION_SERVER_TOPICS_DOMAIN));
+		parameters.setTopicsDomain(conf
+				.getProperty(Configuration.CONFIGURATION_SERVER_TOPICS_DOMAIN));
 		parameters
 				.setChannelsDomain(conf
 						.getProperty(Configuration.CONFIGURATION_SERVER_CHANNELS_DOMAIN));

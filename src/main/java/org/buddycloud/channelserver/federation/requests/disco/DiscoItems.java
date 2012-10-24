@@ -62,7 +62,7 @@ public class DiscoItems implements AsyncCall<Collection<JID>> {
 			@Override
 			public void onError(IQ iq) {
 				// TODO
-				handler.onError(new NodeStoreException());
+				handler.onError(new NodeStoreException(iq.toString()));
 			}
 		});
 	}

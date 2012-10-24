@@ -17,6 +17,9 @@ import org.buddycloud.channelserver.pubsub.model.NodeSubscription;
 import org.buddycloud.channelserver.utils.request.Parameters;
 import org.xmpp.packet.JID;
 
+/**
+ * TODO: Get rid of this class ASAP!
+ */
 public class FederatedChannelManager implements ChannelManager {
 
 	private final ChannelManager delegate;
@@ -246,12 +249,12 @@ public class FederatedChannelManager implements ChannelManager {
 				@Override
 				public void onSuccess(final K data) {
 					if(LOGGER.isDebugEnabled()) {
-						LOGGER.debug("Successfully received data from the AsyncCall");
+						LOGGER.debug("Successfully received data from the AsyncCall: " + data);
 					}
 					result.set(data);
 
 					// If Thread.sleep has timed out then we don't want to interrupt the thread
-					if(!timedOut.get() && (thread.getState() == Thread.State.TIMED_WAITING)) {
+					if(!timedOut.get()) {
 						thread.interrupt();
 					}
 				}
@@ -264,7 +267,7 @@ public class FederatedChannelManager implements ChannelManager {
 					error.set(t);
 
 					// If Thread.sleep has timed out then we don't want to interrupt the thread
-					if(!timedOut.get() && (thread.getState() == Thread.State.TIMED_WAITING)) {
+					if(!timedOut.get()) {
 						thread.interrupt();
 					}
 				}
@@ -303,7 +306,7 @@ public class FederatedChannelManager implements ChannelManager {
 			return obj;
 		}
 
-		public void set(final T obj) {
+		public synchronized void set(final T obj) {
 			this.obj = obj;
 		}
 	}
