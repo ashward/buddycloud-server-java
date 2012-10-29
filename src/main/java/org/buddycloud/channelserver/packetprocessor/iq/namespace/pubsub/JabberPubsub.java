@@ -4,6 +4,7 @@ import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 
 import org.buddycloud.channelserver.channel.ChannelManager;
+import org.buddycloud.channelserver.channel.OperationsFactory;
 import org.buddycloud.channelserver.packetprocessor.PacketProcessor;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.AbstractNamespace;
 import org.xmpp.packet.IQ;
@@ -29,10 +30,10 @@ public class JabberPubsub extends AbstractNamespace {
 	private final PubSubSet setProcessor;
 
 	public JabberPubsub(BlockingQueue<Packet> outQueue, Properties conf,
-			ChannelManager channelManager) {
+			ChannelManager channelManager, final OperationsFactory operations) {
 
 		super(outQueue, conf, channelManager);
-		this.getProcessor = new PubSubGet(outQueue, channelManager);
+		this.getProcessor = new PubSubGet(outQueue, channelManager, operations);
 		this.setProcessor = new PubSubSet(outQueue, channelManager);
 	}
 

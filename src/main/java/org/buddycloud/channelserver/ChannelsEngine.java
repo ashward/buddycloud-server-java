@@ -71,7 +71,7 @@ public class ChannelsEngine implements Component {
 		OutQueueConsumer outQueueConsumer = new OutQueueConsumer(this, outQueue);
 		outQueueConsumer.start();
 		
-		InQueueConsumer inQueueConsumer = new InQueueConsumer(outQueue, conf, inQueue, channelManagerFactory, xmppConnection);
+		InQueueConsumer inQueueConsumer = new InQueueConsumer(outQueue, conf, inQueue, channelManagerFactory, xmppConnection, registry, xmppConnection);
 		inQueueConsumer.start();
 		
 		LOGGER.info("XMPP Component started. We are '" + jid.toBareJID() + "' and ready to accept packages.");

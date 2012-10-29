@@ -52,9 +52,11 @@ public abstract class ChannelServerRequestAbstract<T> implements AsyncCall<T> {
 		});
 	}
 
-	protected abstract T fromIq(IQ iq);
+	protected JID getToJid() {
+		return channelManager.getRequestParameters().getRequester();
+	}
 
-	protected abstract JID getToJid();
+	protected abstract T fromIq(IQ iq);
 
 	protected abstract void sendRequest(JID channelServer,
 			ResultHandler<T> handler);

@@ -20,6 +20,7 @@ import org.xmpp.packet.JID;
 /**
  * TODO: Get rid of this class ASAP!
  */
+@Deprecated
 public class FederatedChannelManager implements ChannelManager {
 
 	private final ChannelManager delegate;

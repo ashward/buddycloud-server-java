@@ -24,16 +24,10 @@ public class ChannelManagerFactoryImpl implements ChannelManagerFactory {
 
 	@Override
 	public ChannelManager create() {
-		ChannelManager localDataStore = new ChannelManagerImpl(
+		ChannelManager channelManager = new ChannelManagerImpl(
 				nodeStoreFactory.create(), configuration);
 
-		OperationsFactory operations = new OperationsFactory(registry, connection, localDataStore);
-		
-		FederatedChannelManager channelManager = new FederatedChannelManager(localDataStore, connection,
-				registry, operations);
-		
-		
-		channelManager.setTimeoutMillis(configuration.getIntegerProperty(Configuration.CONFIGURATION_REMOTE_TIMEOUT, 60000));
+		OperationsFactory operations = new OperationsFactory(registry, connection, channelManager);
 		
 		return channelManager;
 	}

@@ -4,7 +4,8 @@ import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.log4j.Logger;
-import org.buddycloud.channelserver.channel.ChannelManager;
+import org.buddycloud.channelserver.channel.OperationsFactory;
+import org.buddycloud.channelserver.federation.AsyncCall.ResultHandler;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.PubSubElementProcessor;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.PubSubGet;
 import org.buddycloud.channelserver.pubsub.model.NodeSubscription;
@@ -16,60 +17,72 @@ import org.xmpp.packet.Packet;
 public class SubscriptionsGet implements PubSubElementProcessor {
 
 	private final BlockingQueue<Packet> outQueue;
-	private final ChannelManager channelManager;
+	private final OperationsFactory operations;
 
 	private static final Logger LOGGER = Logger
 			.getLogger(SubscriptionsGet.class);
 
 	public SubscriptionsGet(BlockingQueue<Packet> outQueue,
-			ChannelManager channelManager) {
+			OperationsFactory operations) {
 		this.outQueue = outQueue;
-		this.channelManager = channelManager;
+		this.operations = operations;
 	}
 
 	@Override
-	public void process(Element elm, JID actorJID, IQ reqIQ, Element rsm)
+	public void process(final Element elm, JID actorJID, final IQ reqIQ, final Element rsm)
 			throws Exception {
-		IQ result = IQ.createResultIQ(reqIQ);
-		Element pubsub = result.setChildElement(PubSubGet.ELEMENT_NAME,
-				elm.getNamespaceURI());
-		Element subscriptions = pubsub.addElement("subscriptions");
-
-		String node = elm.attributeValue("node");
+		final String node = elm.attributeValue("node");
 
 		if (actorJID == null) {
 			actorJID = reqIQ.getFrom();
 		}
+		
+		ResultHandler<Collection<NodeSubscription>> handler = new ResultHandler<Collection<NodeSubscription>>() {
+			
+			@Override
+			public void onSuccess(Collection<NodeSubscription> result) {
+				try {
+					returnSubscriptions(reqIQ, elm, result, node);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			@Override
+			public void onError(Throwable t) {
+				// TODO Auto-generated method stub
+				
+			}
+		};
 
 		if (node == null) {
-			// let's get all subscriptions.
-			Collection<NodeSubscription> cur = channelManager
-					.getUserSubscriptions(actorJID);
-			
-			for (NodeSubscription ns : cur) {
-				subscriptions
-						.addElement("subscription")
-						.addAttribute("node", ns.getNodeId())
-						.addAttribute("subscription",
-								ns.getSubscription().toString())
-						.addAttribute("jid", ns.getUser().toBareJID());
-			}
-
+			operations.getUserSubscriptions(actorJID).call(handler);
 		} else {
-			Collection<NodeSubscription> cur = channelManager
-					.getNodeSubscriptions(node);
-			subscriptions.addAttribute("node", node);
-
-			for (NodeSubscription ns : cur) {
-
-				subscriptions
-						.addElement("subscription")
-						.addAttribute("node", ns.getNodeId())
-						.addAttribute("subscription",
-								ns.getSubscription().toString())
-						.addAttribute("jid", ns.getUser().toBareJID());
-			}
+			operations.getNodeSubscriptions(node).call(handler);
 		}
+	}
+	
+	private void returnSubscriptions(final IQ requestIQ, final Element requestEl, final Collection<NodeSubscription> subscriptions, final String node) throws InterruptedException {
+		IQ result = IQ.createResultIQ(requestIQ);
+		Element pubsub = result.setChildElement(PubSubGet.ELEMENT_NAME,
+				requestEl.getNamespaceURI());
+		Element subscriptionsEl = pubsub.addElement("subscriptions");
+
+		if(node != null) {
+			subscriptionsEl.addAttribute("node", node);
+		}
+
+		for (NodeSubscription ns : subscriptions) {
+
+			subscriptionsEl
+					.addElement("subscription")
+					.addAttribute("node", ns.getNodeId())
+					.addAttribute("subscription",
+							ns.getSubscription().toString())
+					.addAttribute("jid", ns.getUser().toBareJID());
+		}
+		
 		outQueue.put(result);
 	}
 

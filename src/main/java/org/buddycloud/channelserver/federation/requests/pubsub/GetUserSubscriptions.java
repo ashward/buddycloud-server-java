@@ -5,11 +5,11 @@ import org.buddycloud.channelserver.connection.XMPPConnection;
 import org.buddycloud.channelserver.federation.ServiceDiscoveryRegistry;
 import org.xmpp.packet.JID;
 
-public class GetUserAffiliations extends GetAffiliations {
+public class GetUserSubscriptions extends GetSubscriptions {
 
-	public GetUserAffiliations(final XMPPConnection connection,
-			final ServiceDiscoveryRegistry discovery,
-			ChannelManager channelManager, final JID user) {
+	public GetUserSubscriptions(ServiceDiscoveryRegistry discovery,
+			XMPPConnection connection, ChannelManager channelManager, final JID user) {
 		super(connection, discovery, channelManager, user);
 	}
+
 }

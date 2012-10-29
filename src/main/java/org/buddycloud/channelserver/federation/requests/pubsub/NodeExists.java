@@ -23,8 +23,8 @@ public class NodeExists extends
 	private String nodeId;
 
 	public NodeExists(final ServiceDiscoveryRegistry discovery,
-			final XMPPConnection connection, final String nodeId,
-			ChannelManager channelManager) {
+			final XMPPConnection connection,
+			ChannelManager channelManager, final String nodeId) {
 		super(discovery, connection, channelManager);
 		this.nodeId = nodeId;
 	}

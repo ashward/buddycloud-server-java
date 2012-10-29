@@ -30,8 +30,8 @@ public class GetNodeItems extends
 	private String nodeId;
 
 	public GetNodeItems(final ServiceDiscoveryRegistry discovery,
-			final XMPPConnection connection, final String nodeId,
-			ChannelManager channelManager) {
+			final XMPPConnection connection,
+			ChannelManager channelManager, final String nodeId) {
 		super(discovery, connection, channelManager);
 		this.nodeId = nodeId;
 	}
@@ -88,7 +88,8 @@ public class GetNodeItems extends
 		String id;
 		Date updated;
 		try {
-		    List<Element> itemList = iq.getElement().elements("item");
+		    @SuppressWarnings("unchecked")
+			List<Element> itemList = iq.getElement().elements("item");
 		    for (Element item : itemList) {
 		    	id = item.attributeValue("id");
 		    	updated = new Date(item.elementText("updated"));

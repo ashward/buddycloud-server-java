@@ -7,6 +7,7 @@ import java.util.concurrent.BlockingQueue;
 
 import org.apache.log4j.Logger;
 import org.buddycloud.channelserver.channel.ChannelManager;
+import org.buddycloud.channelserver.channel.OperationsFactory;
 import org.buddycloud.channelserver.packetprocessor.PacketProcessor;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.discoinfo.JabberDiscoInfo;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.JabberPubsub;
@@ -23,13 +24,11 @@ public class IQProcessor implements PacketProcessor<IQ> {
     private Map<String, PacketProcessor<IQ>> processorsPerNamespace = 
             new HashMap<String, PacketProcessor<IQ>>();
     private BlockingQueue<Packet> outQueue;
-    private ChannelManager channelManager;
 	
-	public IQProcessor(BlockingQueue<Packet> outQueue, Properties conf, ChannelManager channelManager) {
+	public IQProcessor(BlockingQueue<Packet> outQueue, Properties conf, ChannelManager channelManager, final OperationsFactory operations) {
 		this.outQueue  = outQueue;
-		this.channelManager = channelManager;
 		
-		JabberPubsub ps = new JabberPubsub(outQueue, conf, channelManager);
+		JabberPubsub ps = new JabberPubsub(outQueue, conf, channelManager, operations);
 		
         processorsPerNamespace.put(JabberDiscoInfo.NAMESPACE_URI,
                 new JabberDiscoInfo(outQueue, conf, channelManager));
