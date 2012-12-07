@@ -1,14 +1,34 @@
+/*
+ * Buddycloud Channel Server
+ * http://buddycloud.com/
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
-
 import org.apache.log4j.Logger;
+import org.buddycloud.channelserver.channel.ChannelManager;
 import org.buddycloud.channelserver.packetprocessor.PacketProcessor;
-import org.buddycloud.channelserver.channel.ChannelManager;
-import org.buddycloud.channelserver.channel.ChannelManager;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.set.AffiliationEvent;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.set.ItemDelete;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.set.NodeConfigure;
@@ -25,104 +45,109 @@ import org.xmpp.packet.Packet;
 import org.xmpp.packet.PacketError;
 
 public class PubSubSet implements PacketProcessor<IQ> {
-    
-    public static final String ELEMENT_NAME = "pubsub";
 
-    private static final Logger LOGGER = Logger.getLogger(PubSubSet.class);
-    
-    private final BlockingQueue<Packet> outQueue;
-    private final ChannelManager channelManager;
-    private final List<PubSubElementProcessor> elementProcessors = new LinkedList<PubSubElementProcessor>();
-    
-    public PubSubSet(BlockingQueue<Packet> outQueue, ChannelManager channelManager) {
-        this.outQueue = outQueue;
-        this.channelManager = channelManager;
-        initElementProcessors();
-    }
-    
-    private void initElementProcessors() {
-        elementProcessors.add(new PublishSet(outQueue, channelManager));
-        elementProcessors.add(new SubscribeSet(outQueue, channelManager));
-        elementProcessors.add(new UnsubscribeSet(outQueue, channelManager));
-        elementProcessors.add(new NodeCreate(outQueue, channelManager));
-        elementProcessors.add(new NodeConfigure(outQueue, channelManager));
-        elementProcessors.add(new SubscriptionEvent(outQueue, channelManager));
-        elementProcessors.add(new AffiliationEvent(outQueue, channelManager));
-        elementProcessors.add(new ItemDelete(outQueue, channelManager));
-    }
-    
-    @Override
-    public void process(IQ reqIQ) throws Exception {
-        
-        Element pubsub = reqIQ.getChildElement();
-        
-        //Let's get the possible actor
-        JID actorJID = null;
-        if(pubsub.element("actor") != null) {
-            actorJID = new JID(pubsub.element("actor").getTextTrim());
-            /**
-             * TODO validate here that the JID is somehow sane.
-             *      We could check that the domains are the same etc.
-             *      
-             */
-            // something like this:
-            // reqIQ.getFrom().getDomain().contains(actorJID.getDomain());
-            //
-            // If not, return not-allowed or bad request?
-            // <error type='cancel'>
-            //    <not-allowed xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
-            //
-            //    or ?
-            //
-            //    <bad-request xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
-            // </error>
-            //
-            //actor = actorJID.toBareJID();
-            
-            if(!reqIQ.getFrom().getDomain().contains(actorJID.getDomain())) {
-                IQ reply = IQ.createResultIQ(reqIQ);
-                reply.setChildElement(reqIQ.getChildElement().createCopy());
-                reply.setType(Type.error);
-                PacketError pe = new PacketError(org.xmpp.packet.PacketError.Condition.bad_request, 
-                                                 org.xmpp.packet.PacketError.Type.cancel);
-                reply.setError(pe);
-                outQueue.put(reply);
-                return;
-            }
-        }
-        
-        @SuppressWarnings("unchecked")
-        List<Element> elements = pubsub.elements();
+	public static final String ELEMENT_NAME = "pubsub";
 
-        boolean handled = false;
-        for (Element x : elements) {
-            for (PubSubElementProcessor elementProcessor : elementProcessors) {
-                if (elementProcessor.accept(x)) {
-                    elementProcessor.process(x, actorJID, reqIQ, null);
-                    return;
-                }
-            }
-        }
-        // <iq type='error'
-        //     from='pubsub.shakespeare.lit'
-        //     to='hamlet@denmark.lit/elsinore'
-        //     id='create1'>
-        //     <error type='cancel'>
-        //       <feature-not-implemented xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
-        //       <unsupported xmlns='http://jabber.org/protocol/pubsub#errors' feature='create-nodes'/>
-        //     </error>
-        // </iq>
+	@SuppressWarnings("unused")
+	private static final Logger LOGGER = Logger.getLogger(PubSubSet.class);
 
-        // TODO, fix this. Now we just reply unexpected_request.
-        //       We should answer something like above.
-        
-        IQ reply = IQ.createResultIQ(reqIQ);
-        reply.setChildElement(reqIQ.getChildElement().createCopy());
-        reply.setType(Type.error);
-        PacketError pe = new PacketError(org.xmpp.packet.PacketError.Condition.unexpected_request, 
-                                         org.xmpp.packet.PacketError.Type.wait);
-        reply.setError(pe);
-        outQueue.put(reply);
-    }
-    
+	private final BlockingQueue<Packet> outQueue;
+	private final ChannelManager channelManager;
+	private final List<PubSubElementProcessor> elementProcessors = new LinkedList<PubSubElementProcessor>();
+
+	public PubSubSet(BlockingQueue<Packet> outQueue,
+			ChannelManager channelManager) {
+		this.outQueue = outQueue;
+		this.channelManager = channelManager;
+		initElementProcessors();
+	}
+
+	private void initElementProcessors() {
+		elementProcessors.add(new PublishSet(outQueue, channelManager));
+		elementProcessors.add(new SubscribeSet(outQueue, channelManager));
+		elementProcessors.add(new UnsubscribeSet(outQueue, channelManager));
+		elementProcessors.add(new NodeCreate(outQueue, channelManager));
+		elementProcessors.add(new NodeConfigure(outQueue, channelManager));
+		elementProcessors.add(new SubscriptionEvent(outQueue, channelManager));
+		elementProcessors.add(new AffiliationEvent(outQueue, channelManager));
+		elementProcessors.add(new ItemDelete(outQueue, channelManager));
+	}
+
+	@Override
+	public void process(IQ reqIQ) throws Exception {
+
+		Element pubsub = reqIQ.getChildElement();
+
+		// Let's get the possible actor
+		JID actorJID = null;
+		if (pubsub.element("actor") != null) {
+			actorJID = new JID(pubsub.element("actor").getTextTrim());
+			/**
+			 * TODO validate here that the JID is somehow sane. We could check
+			 * that the domains are the same etc.
+			 * 
+			 */
+			// something like this:
+			// reqIQ.getFrom().getDomain().contains(actorJID.getDomain());
+			//
+			// If not, return not-allowed or bad request?
+			// <error type='cancel'>
+			// <not-allowed xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+			//
+			// or ?
+			//
+			// <bad-request xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+			// </error>
+			//
+			// actor = actorJID.toBareJID();
+
+			if (!reqIQ.getFrom().getDomain().contains(actorJID.getDomain())) {
+				IQ reply = IQ.createResultIQ(reqIQ);
+				reply.setChildElement(reqIQ.getChildElement().createCopy());
+				reply.setType(Type.error);
+				PacketError pe = new PacketError(
+						org.xmpp.packet.PacketError.Condition.bad_request,
+						org.xmpp.packet.PacketError.Type.cancel);
+				reply.setError(pe);
+				outQueue.put(reply);
+				return;
+			}
+		}
+
+		@SuppressWarnings("unchecked")
+		List<Element> elements = pubsub.elements();
+
+		for (Element x : elements) {
+			for (PubSubElementProcessor elementProcessor : elementProcessors) {
+				if (elementProcessor.accept(x)) {
+					elementProcessor.process(x, actorJID, reqIQ, null);
+					return;
+				}
+			}
+		}
+		// <iq type='error'
+		// from='pubsub.shakespeare.lit'
+		// to='hamlet@denmark.lit/elsinore'
+		// id='create1'>
+		// <error type='cancel'>
+		// <feature-not-implemented
+		// xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+		// <unsupported xmlns='http://jabber.org/protocol/pubsub#errors'
+		// feature='create-nodes'/>
+		// </error>
+		// </iq>
+
+		// TODO, fix this. Now we just reply unexpected_request.
+		// We should answer something like above.
+
+		IQ reply = IQ.createResultIQ(reqIQ);
+		reply.setChildElement(reqIQ.getChildElement().createCopy());
+		reply.setType(Type.error);
+		PacketError pe = new PacketError(
+				org.xmpp.packet.PacketError.Condition.unexpected_request,
+				org.xmpp.packet.PacketError.Type.wait);
+		reply.setError(pe);
+		outQueue.put(reply);
+	}
+
 }

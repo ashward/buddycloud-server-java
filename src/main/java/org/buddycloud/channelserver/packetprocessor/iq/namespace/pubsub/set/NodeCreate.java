@@ -1,3 +1,25 @@
+/*
+ * Buddycloud Channel Server
+ * http://buddycloud.com/
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.set;
 
 import java.util.HashMap;
@@ -22,6 +44,7 @@ public class NodeCreate extends PubSubElementProcessorAbstract {
 	private static final String NODE_REG_EX = "^/user/[^@]+@[^/]+/[^/]+$";
 	private static final String INVALID_NODE_CONFIGURATION = "Invalid node configuration";
 
+	@SuppressWarnings("unused")
 	private static final Logger LOGGER = Logger.getLogger(NodeCreate.class);
 
 	public NodeCreate(BlockingQueue<Packet> outQueue,
@@ -138,13 +161,12 @@ public class NodeCreate extends PubSubElementProcessorAbstract {
 		}
 		return true;
 	}
-	
+
 	private void makeRemoteRequest() throws InterruptedException {
 		request.setTo(new JID(node.split("/")[2]).getDomain());
-		Element actor = request.getElement()
-		    .element("pubsub")
-		    .addElement("actor", JabberPubsub.NS_BUDDYCLOUD);
+		Element actor = request.getElement().element("pubsub")
+				.addElement("actor", JabberPubsub.NS_BUDDYCLOUD);
 		actor.addText(request.getFrom().toBareJID());
-	    outQueue.put(request);
+		outQueue.put(request);
 	}
 }

@@ -1,3 +1,25 @@
+/*
+ * Buddycloud Channel Server
+ * http://buddycloud.com/
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.get;
 
 import java.io.StringReader;
@@ -37,22 +59,16 @@ import org.xmpp.resultsetmanagement.ResultSet;
 public class ItemsGet implements PubSubElementProcessor {
 	private static final Logger LOGGER = Logger.getLogger(ItemsGet.class);
 
-	private static final int MAX_ITEMS_TO_RETURN = 50;
-
 	private final BlockingQueue<Packet> outQueue;
 
 	private ChannelManager channelManager;
 	private String node;
-	private String firstItem;
-	private String lastItem;
 	private SAXReader xmlReader;
 	private Element entry;
 	private IQ requestIq;
 	private JID fetchersJid;
 	private IQ reply;
 	private Element resultSetManagement;
-	private Element element;
-
 	private NodeViewAcl nodeViewAcl;
 	private Map<String, String> nodeDetails;
 
@@ -83,10 +99,10 @@ public class ItemsGet implements PubSubElementProcessor {
 		node = elm.attributeValue("node");
 		requestIq = reqIQ;
 		reply = IQ.createResultIQ(reqIQ);
-		element = elm;
 		resultSetManagement = rsm;
 
-		if (false == ResultSet.isValidRSMRequest(resultSetManagement)) {
+		if ((resultSetManagement == null)
+				&& (false == ResultSet.isValidRSMRequest(resultSetManagement))) {
 			resultSetManagement = null;
 		}
 
@@ -210,29 +226,6 @@ public class ItemsGet implements PubSubElementProcessor {
 		}
 		return AccessModels.createFromString(nodeDetails
 				.get(AccessModel.FIELD_NAME));
-	}
-
-	private void handleForeignNode(boolean isLocalSubscriber)
-			throws InterruptedException {
-		if (isLocalSubscriber) {
-
-			// TODO, WORK HERE!
-
-			// Start process to fetch items from nodes.
-			// Subscribe sub = Subscribe.buildSubscribeStatemachine(node,
-			// requestIq, channelManager);
-			// outQueue.put(sub.nextStep());
-			// return;
-		}
-
-		IQ reply = IQ.createResultIQ(requestIq);
-		reply.setType(IQ.Type.error);
-		PacketError pe = new PacketError(
-				org.xmpp.packet.PacketError.Condition.item_not_found,
-				org.xmpp.packet.PacketError.Type.cancel);
-		reply.setError(pe);
-		outQueue.put(reply);
-		return;
 	}
 
 	/**

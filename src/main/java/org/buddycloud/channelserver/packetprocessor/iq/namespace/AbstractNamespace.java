@@ -1,14 +1,33 @@
+/*
+ * Buddycloud Channel Server
+ * http://buddycloud.com/
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.buddycloud.channelserver.packetprocessor.iq.namespace;
 
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.log4j.Logger;
 import org.buddycloud.channelserver.channel.ChannelManager;
 import org.buddycloud.channelserver.packetprocessor.PacketProcessor;
-import org.buddycloud.channelserver.queue.statemachine.IStatemachine;
-import org.buddycloud.channelserver.queue.statemachine.StateMachineBuilder;
 import org.xmpp.packet.IQ;
 import org.xmpp.packet.IQ.Type;
 import org.xmpp.packet.Packet;
@@ -83,22 +102,6 @@ public abstract class AbstractNamespace implements PacketProcessor<IQ> {
 		reply.setError(pe);
 
 		outQueue.put(reply);
-	}
-
-	private void handleStateReply(IQ reqIQ) throws InterruptedException {
-		// TODO
-/*
-		// This might be a reply to a state we are on.
-		Map<String, String> state = channelManager.getState(reqIQ.getID());
-		if (state != null && !state.isEmpty()) {
-			IStatemachine sm = StateMachineBuilder.buildFromState(reqIQ, state,
-					channelManager);
-			outQueue.put(sm.nextStep());
-		} else {
-			LOGGER.error("This result was not handled in any way: '"
-					+ reqIQ.toXML() + "'.");
-		}
-*/
 	}
 
 	protected ChannelManager getChannelManager() {

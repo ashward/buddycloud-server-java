@@ -1,10 +1,30 @@
+/*
+ * Buddycloud Channel Server
+ * http://buddycloud.com/
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.set;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.commons.lang.time.DateFormatUtils;
@@ -34,9 +54,6 @@ public class PublishSet implements PubSubElementProcessor {
 
 	private static final Logger LOGGER = Logger.getLogger(PublishSet.class);
 
-	private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat(
-			DateFormatUtils.ISO_DATETIME_TIME_ZONE_FORMAT.getPattern());
-
 	private final BlockingQueue<Packet> outQueue;
 	private final ChannelManager channelManager;
 	private IQ requestIq;
@@ -51,10 +68,10 @@ public class PublishSet implements PubSubElementProcessor {
 	@Override
 	public void process(Element elm, JID actorJID, IQ reqIQ, Element rsm)
 			throws InterruptedException, NodeStoreException {
-		
+
 		node = elm.attributeValue("node");
 		requestIq = reqIQ;
-		
+
 		if (node == null || node.equals("")) {
 
 			/*
@@ -88,9 +105,8 @@ public class PublishSet implements PubSubElementProcessor {
 		}
 
 		JID publishersJID = reqIQ.getFrom();
-		boolean isLocalNode = false;
 		try {
-		    isLocalNode = channelManager.isLocalNode(node);
+			channelManager.isLocalNode(node);
 		} catch (IllegalArgumentException e) {
 			IQ reply = IQ.createResultIQ(reqIQ);
 			reply.setType(Type.error);
@@ -101,7 +117,7 @@ public class PublishSet implements PubSubElementProcessor {
 			outQueue.put(reply);
 			return;
 		}
-		
+
 		if (false == channelManager.isLocalNode(node)) {
 			makeRemoteRequest();
 			return;
@@ -160,15 +176,15 @@ public class PublishSet implements PubSubElementProcessor {
 		Affiliations possibleExistingAffiliation = nodeaffiliation
 				.getAffiliation();
 
-		if ((false == possibleExistingSubscription.equals(
-				Subscriptions.subscribed))
-				|| (false == possibleExistingAffiliation.in(Affiliations.moderator,
-						Affiliations.owner, Affiliations.publisher))) {
+		if ((false == possibleExistingSubscription
+				.equals(Subscriptions.subscribed))
+				|| (false == possibleExistingAffiliation.in(
+						Affiliations.moderator, Affiliations.owner,
+						Affiliations.publisher))) {
 			IQ reply = IQ.createResultIQ(reqIQ);
 			reply.setType(Type.error);
 			PacketError error = new PacketError(
-					PacketError.Condition.forbidden,
-					PacketError.Type.auth);
+					PacketError.Condition.forbidden, PacketError.Type.auth);
 			reply.setError(error);
 			outQueue.put(reply);
 			return;
@@ -306,8 +322,8 @@ public class PublishSet implements PubSubElementProcessor {
 		Element i = items.addElement("item");
 		i.addAttribute("id", id);
 		i.add(entry.createCopy());
-        Element actor = event.addElement("actor");
-        actor.addNamespace("", JabberPubsub.NS_BUDDYCLOUD);
+		Element actor = event.addElement("actor");
+		actor.addNamespace("", JabberPubsub.NS_BUDDYCLOUD);
 
 		ResultSet<NodeSubscription> cur = channelManager
 				.getNodeSubscriptionListeners(node);
@@ -323,10 +339,10 @@ public class PublishSet implements PubSubElementProcessor {
 			 * toBareJID = ns.getForeignChannelServer(); }
 			 */
 			if (ns.getSubscription().equals(Subscriptions.subscribed)) {
-			    LOGGER.debug("Sending post notification to " + to.toBareJID());
-			    msg.setTo(ns.getListener());
-			    actor.setText(to.toBareJID());
-			    outQueue.put(msg.createCopy());
+				LOGGER.debug("Sending post notification to " + to.toBareJID());
+				msg.setTo(ns.getListener());
+				actor.setText(to.toBareJID());
+				outQueue.put(msg.createCopy());
 			}
 		}
 
@@ -334,13 +350,12 @@ public class PublishSet implements PubSubElementProcessor {
 
 	private void makeRemoteRequest() throws InterruptedException {
 		requestIq.setTo(new JID(node.split("/")[2]).getDomain());
-		Element actor = requestIq.getElement()
-		    .element("pubsub")
-		    .addElement("actor", JabberPubsub.NS_BUDDYCLOUD);
+		Element actor = requestIq.getElement().element("pubsub")
+				.addElement("actor", JabberPubsub.NS_BUDDYCLOUD);
 		actor.addText(requestIq.getFrom().toBareJID());
-	    outQueue.put(requestIq);
+		outQueue.put(requestIq);
 	}
-	
+
 	@Override
 	public boolean accept(Element elm) {
 		return elm.getName().equals("publish");

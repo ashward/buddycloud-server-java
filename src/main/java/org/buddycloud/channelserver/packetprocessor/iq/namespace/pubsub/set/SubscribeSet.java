@@ -1,3 +1,24 @@
+/*
+ * Buddycloud Channel Server
+ * http://buddycloud.com/
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.set;
 
@@ -58,12 +79,11 @@ public class SubscribeSet extends PubSubElementProcessorAbstract {
 			missingNodeName();
 			return;
 		}
-        if (false == channelManager.isLocalNode(node)) {
-        	makeRemoteRequest();
-        	return;
-        }
+		if (false == channelManager.isLocalNode(node)) {
+			makeRemoteRequest();
+			return;
+		}
 		subscribingJid = request.getFrom();
-		boolean isLocalNode = true;
 		boolean isLocalSubscriber = false;
 
 		if (actorJID != null) {
@@ -214,11 +234,10 @@ public class SubscribeSet extends PubSubElementProcessorAbstract {
 
 	private void makeRemoteRequest() throws InterruptedException {
 		request.setTo(new JID(node.split("/")[2]).getDomain());
-		Element actor = request.getElement()
-		    .element("pubsub")
-		    .addElement("actor", JabberPubsub.NS_BUDDYCLOUD);
+		Element actor = request.getElement().element("pubsub")
+				.addElement("actor", JabberPubsub.NS_BUDDYCLOUD);
 		actor.addText(request.getFrom().toBareJID());
-	    outQueue.put(request);
+		outQueue.put(request);
 	}
 
 	private void notifySubscribers(Subscriptions subscriptionStatus,
@@ -254,7 +273,8 @@ public class SubscribeSet extends PubSubElementProcessorAbstract {
 		subscription.addAttribute("jid", subscribingJid.toBareJID());
 		subscription.addAttribute("node", node);
 
-		if (true == subscriptionStatus.in(Subscriptions.subscribed, Subscriptions.pending)) {
+		if (true == subscriptionStatus.in(Subscriptions.subscribed,
+				Subscriptions.pending)) {
 			Element affiliation = event.addElement("affiliation");
 			affiliation.addAttribute("node", node);
 			affiliation.addAttribute("jid", subscribingJid.toBareJID());
@@ -276,14 +296,15 @@ public class SubscribeSet extends PubSubElementProcessorAbstract {
 		}
 	}
 
-	private Message getPendingSubscriptionNotification(String receiver, String subscriber) {
+	private Message getPendingSubscriptionNotification(String receiver,
+			String subscriber) {
 
 		Document document = getDocumentHelper();
 		Element message = document.addElement("message");
 		message.addAttribute("id", request.getID() + "-1");
 		message.addAttribute("from", request.getTo().toString());
 		message.addAttribute("type", "headline");
-		message.addAttribute("to",  receiver);
+		message.addAttribute("to", receiver);
 		message.addNamespace("", "jabber:client");
 		DataForm dataForm = new DataForm(DataForm.Type.form);
 		dataForm.addInstruction("Allow " + subscriber
