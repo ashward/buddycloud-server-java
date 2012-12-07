@@ -1,9 +1,7 @@
 package org.buddycloud.channelserver.db;
 
-import java.util.Iterator;
 import java.util.Map;
 
-import org.buddycloud.channelserver.db.exception.NodeNotFoundException;
 import org.buddycloud.channelserver.db.exception.NodeStoreException;
 import org.buddycloud.channelserver.pubsub.affiliation.Affiliations;
 import org.buddycloud.channelserver.pubsub.model.NodeAffiliation;
@@ -36,12 +34,12 @@ public interface NodeStore {
 	 * Add a remote node into the database
 	 * 
 	 * @param nodeId
-	 *          the node reference
+	 *            the node reference
 	 * @throws NodeStoreException
 	 *             if the operation could not be completed.
 	 */
 	void addRemoteNode(String node) throws NodeStoreException;
-	
+
 	/**
 	 * Sets a single configuration option on the node
 	 * 
@@ -222,11 +220,11 @@ public interface NodeStore {
 	 *            modified date).
 	 * @param count
 	 *            the maximum number of records to return.
-	 * @return an {@link Iterator} of the node entries.
+	 * @return a {@link ResultSet} containing the node entries.
 	 * @throws NodeStoreException
 	 */
 
-	CloseableIterator<NodeItem> getNodeItems(String nodeId, String afterItemId,
+	ResultSet<NodeItem> getNodeItems(String nodeId, String afterItemId,
 			int count) throws NodeStoreException;
 
 	/**
@@ -234,11 +232,10 @@ public interface NodeStore {
 	 * 
 	 * @param nodeId
 	 *            the node id from which to retrieve the items.
-	 * @return an {@link Iterator} of the node entries.
+	 * @return a {@link ResultSet} containing the node entries.
 	 * @throws NodeStoreException
 	 */
-	CloseableIterator<NodeItem> getNodeItems(String nodeId)
-			throws NodeStoreException;
+	ResultSet<NodeItem> getNodeItems(String nodeId) throws NodeStoreException;
 
 	/**
 	 * Retrieves the number of items within a node.
@@ -300,7 +297,7 @@ public interface NodeStore {
 	 * Closes this node store instance and releases any resources.
 	 */
 	void close() throws NodeStoreException;
-	
+
 	/**
 	 * Begins an atomic transaction. The transaction will include any operations
 	 * carried out on this object until either {@link #commitTransaction()} or

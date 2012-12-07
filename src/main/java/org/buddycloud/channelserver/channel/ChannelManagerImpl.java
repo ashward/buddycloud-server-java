@@ -2,11 +2,9 @@ package org.buddycloud.channelserver.channel;
 
 import java.util.Map;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.buddycloud.channelserver.Configuration;
-import org.buddycloud.channelserver.db.CloseableIterator;
 import org.buddycloud.channelserver.db.NodeStore;
 import org.buddycloud.channelserver.db.exception.NodeStoreException;
 import org.buddycloud.channelserver.pubsub.affiliation.Affiliations;
@@ -127,13 +125,13 @@ public class ChannelManagerImpl implements ChannelManager {
 	}
 
 	@Override
-	public CloseableIterator<NodeItem> getNodeItems(String nodeId,
-			String afterItemId, int count) throws NodeStoreException {
+	public ResultSet<NodeItem> getNodeItems(String nodeId, String afterItemId,
+			int count) throws NodeStoreException {
 		return nodeStore.getNodeItems(nodeId, afterItemId, count);
 	}
 
 	@Override
-	public CloseableIterator<NodeItem> getNodeItems(String nodeId)
+	public ResultSet<NodeItem> getNodeItems(String nodeId)
 			throws NodeStoreException {
 		return nodeStore.getNodeItems(nodeId);
 	}

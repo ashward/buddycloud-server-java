@@ -1,16 +1,15 @@
 package org.buddycloud.channelserver.db.mock;
 
-import org.xmpp.resultsetmanagement.ResultSet;
 import java.util.Map;
 
 import org.buddycloud.channelserver.channel.ChannelManager;
-import org.buddycloud.channelserver.db.CloseableIterator;
 import org.buddycloud.channelserver.db.exception.NodeStoreException;
 import org.buddycloud.channelserver.pubsub.affiliation.Affiliations;
 import org.buddycloud.channelserver.pubsub.model.NodeAffiliation;
 import org.buddycloud.channelserver.pubsub.model.NodeItem;
 import org.buddycloud.channelserver.pubsub.model.NodeSubscription;
 import org.xmpp.packet.JID;
+import org.xmpp.resultsetmanagement.ResultSet;
 
 public class Mock implements ChannelManager {
 
@@ -132,14 +131,14 @@ public class Mock implements ChannelManager {
 	}
 
 	@Override
-	public CloseableIterator<NodeItem> getNodeItems(String nodeId,
-			String afterItemId, int count) throws NodeStoreException {
+	public ResultSet<NodeItem> getNodeItems(String nodeId, String afterItemId,
+			int count) throws NodeStoreException {
 
 		return null;
 	}
 
 	@Override
-	public CloseableIterator<NodeItem> getNodeItems(String nodeId)
+	public ResultSet<NodeItem> getNodeItems(String nodeId)
 			throws NodeStoreException {
 
 		return null;

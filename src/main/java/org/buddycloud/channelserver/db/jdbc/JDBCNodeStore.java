@@ -14,8 +14,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
-import org.buddycloud.channelserver.db.ClosableIteratorImpl;
-import org.buddycloud.channelserver.db.CloseableIterator;
 import org.buddycloud.channelserver.db.NodeStore;
 import org.buddycloud.channelserver.db.exception.ItemNotFoundException;
 import org.buddycloud.channelserver.db.exception.NodeStoreException;
@@ -199,7 +197,7 @@ public class JDBCNodeStore implements NodeStore {
 						.deleteAffiliation());
 				deleteStatement.setString(1, nodeId);
 				deleteStatement.setString(2, user.toBareJID());
-				int rows = deleteStatement.executeUpdate();
+				deleteStatement.executeUpdate();
 				deleteStatement.close();
 			} else {
 				updateStatement = conn.prepareStatement(dialect
@@ -553,8 +551,8 @@ public class JDBCNodeStore implements NodeStore {
 	}
 
 	@Override
-	public CloseableIterator<NodeItem> getNodeItems(String nodeId,
-			String afterItemId, int count) throws NodeStoreException {
+	public ResultSet<NodeItem> getNodeItems(String nodeId, String afterItemId,
+			int count) throws NodeStoreException {
 		NodeItem afterItem = null;
 
 		PreparedStatement stmt = null;
@@ -574,26 +572,29 @@ public class JDBCNodeStore implements NodeStore {
 
 		try {
 			if (afterItem == null) {
+				ArrayList<NodeItem> result;
+
+				if (count > -1) {
+					result = new ArrayList<NodeItem>(count);
+				} else {
+					result = new ArrayList<NodeItem>();
+				}
+
 				stmt = conn.prepareStatement(dialect.selectItemsForNode()
 						+ countSQL);
 				stmt.setString(1, nodeId);
 
 				java.sql.ResultSet rs = stmt.executeQuery();
 
-				stmt = null; // Prevent the finally block from closing the
-								// statement
+				while (rs.next()) {
+					result.add(new NodeItemImpl(rs.getString(1), rs
+							.getString(2), rs.getTimestamp(3), rs.getString(4)));
+				}
 
-				return new ResultSetIterator<NodeItem>(rs,
-						new ResultSetIterator.RowConverter<NodeItem>() {
-							@Override
-							public NodeItem convertRow(java.sql.ResultSet rs)
-									throws SQLException {
-								return new NodeItemImpl(rs.getString(1),
-										rs.getString(2), rs.getTimestamp(3),
-										rs.getString(4));
-							}
-						});
+				return new ResultSetImpl<NodeItem>(result);
 			} else {
+				LinkedList<NodeItem> result = new LinkedList<NodeItem>();
+
 				stmt = conn.prepareStatement(dialect
 						.selectItemsForNodeAfterDate() + countSQL);
 				stmt.setString(1, nodeId);
@@ -605,14 +606,12 @@ public class JDBCNodeStore implements NodeStore {
 
 				java.sql.ResultSet rs = stmt.executeQuery();
 
-				LinkedList<NodeItem> results = new LinkedList<NodeItem>();
-
 				while (rs.next()) {
-					results.push(new NodeItemImpl(rs.getString(1), rs
+					result.push(new NodeItemImpl(rs.getString(1), rs
 							.getString(2), rs.getTimestamp(3), rs.getString(4)));
 				}
 
-				return new ClosableIteratorImpl<NodeItem>(results.iterator());
+				return new ResultSetImpl<NodeItem>(result);
 			}
 		} catch (SQLException e) {
 			throw new NodeStoreException(e);
@@ -622,7 +621,7 @@ public class JDBCNodeStore implements NodeStore {
 	}
 
 	@Override
-	public CloseableIterator<NodeItem> getNodeItems(String nodeId)
+	public ResultSet<NodeItem> getNodeItems(String nodeId)
 			throws NodeStoreException {
 		return getNodeItems(nodeId, null, -1);
 	}
