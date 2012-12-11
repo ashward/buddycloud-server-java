@@ -22,7 +22,16 @@
 
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.get;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -43,6 +52,7 @@ import org.buddycloud.channelserver.pubsub.model.impl.NodeSubscriptionImpl;
 import org.buddycloud.channelserver.pubsub.subscription.Subscriptions;
 import org.buddycloud.channelserver.utils.node.NodeAclRefuseReason;
 import org.buddycloud.channelserver.utils.node.NodeViewAcl;
+import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.dom4j.Namespace;
 import org.dom4j.QName;
@@ -60,7 +70,6 @@ import org.xmpp.resultsetmanagement.ResultSetImpl;
 public class ItemsGetTest extends IQTestHandler {
 
 	private static final String NODE = "/user/pamela@denmark.lit/posts";
-	private static final String NODE_2 = "/user/pamela@denmark.lit/posts";
 	private static final JID jid = new JID("juliet@shakespeare.lit");
 
 	private IQ request;
@@ -78,9 +87,8 @@ public class ItemsGetTest extends IQTestHandler {
 		request = readStanzaAsIq("/iq/pubsub/items/request.stanza");
 		element = new BaseElement("items");
 
-		channelManager = Mockito.mock(Mock.class);
-		Mockito.when(channelManager.isLocalNode(Mockito.anyString()))
-				.thenReturn(true);
+		channelManager = mock(Mock.class);
+		when(channelManager.isLocalNode(anyString())).thenReturn(true);
 		itemsGet.setChannelManager(channelManager);
 	}
 
@@ -110,8 +118,7 @@ public class ItemsGetTest extends IQTestHandler {
 	@Test
 	public void testExternalNodeReturnsExpectedStanzaEarly() throws Exception {
 
-		Mockito.when(channelManager.isLocalNode(Mockito.anyString()))
-				.thenReturn(false);
+		when(channelManager.isLocalNode(anyString())).thenReturn(false);
 
 		element.addAttribute("node", "/user/user@remote-server.com/posts");
 
@@ -132,7 +139,7 @@ public class ItemsGetTest extends IQTestHandler {
 	public void testNodeWhichDoesntExistReturnsNotFoundStanza()
 			throws Exception {
 
-		Mockito.when(channelManager.nodeExists(NODE)).thenReturn(false);
+		when(channelManager.nodeExists(NODE)).thenReturn(false);
 		element.addAttribute("node", NODE);
 
 		itemsGet.process(element, jid, request, null);
@@ -150,8 +157,8 @@ public class ItemsGetTest extends IQTestHandler {
 			throws Exception {
 		element.addAttribute("node", NODE);
 
-		Mockito.when(channelManager.nodeExists(NODE)).thenThrow(
-				NodeStoreException.class);
+		when(channelManager.nodeExists(NODE)).thenThrow(
+				new NodeStoreException());
 
 		itemsGet.process(element, jid, request, null);
 		Packet response = queue.poll(100, TimeUnit.MILLISECONDS);
@@ -169,21 +176,17 @@ public class ItemsGetTest extends IQTestHandler {
 
 		element.addAttribute("node", NODE);
 
-		Mockito.when(channelManager.nodeExists(NODE)).thenReturn(true);
-		Mockito.when(channelManager.getUserSubscription(NODE, jid)).thenReturn(
-				null);
+		when(channelManager.nodeExists(NODE)).thenReturn(true);
+		when(channelManager.getUserSubscription(NODE, jid)).thenReturn(null);
 
-		NodeViewAcl nodeViewAclMock = Mockito.mock(NodeViewAcl.class);
-		Mockito.doReturn(false)
-				.when(nodeViewAclMock)
-				.canViewNode(Mockito.anyString(),
-						Mockito.any(Affiliations.class),
-						Mockito.any(Subscriptions.class),
-						Mockito.any(AccessModels.class));
+		NodeViewAcl nodeViewAclMock = mock(NodeViewAcl.class);
+		doReturn(false).when(nodeViewAclMock).canViewNode(anyString(),
+				any(Affiliations.class), any(Subscriptions.class),
+				any(AccessModels.class));
 		NodeAclRefuseReason refusalReason = new NodeAclRefuseReason(
 				PacketError.Type.auth, PacketError.Condition.forbidden,
 				"pending-subscription");
-		Mockito.when(nodeViewAclMock.getReason()).thenReturn(refusalReason);
+		when(nodeViewAclMock.getReason()).thenReturn(refusalReason);
 		itemsGet.setNodeViewAcl(nodeViewAclMock);
 
 		itemsGet.process(element, jid, request, null);
@@ -209,28 +212,22 @@ public class ItemsGetTest extends IQTestHandler {
 				.mock(NodeSubscriptionImpl.class);
 		NodeAffiliationImpl affiliation = Mockito
 				.mock(NodeAffiliationImpl.class);
-		Mockito.when(affiliation.getAffiliation()).thenReturn(
-				Affiliations.member);
-		Mockito.when(subscription.getSubscription()).thenReturn(
+		when(affiliation.getAffiliation()).thenReturn(Affiliations.member);
+		when(subscription.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(channelManager.getUserSubscription(NODE, jid)).thenReturn(
+		when(channelManager.getUserSubscription(NODE, jid)).thenReturn(
 				subscription);
-		Mockito.when(channelManager.getUserAffiliation(NODE, jid)).thenReturn(
+		when(channelManager.getUserAffiliation(NODE, jid)).thenReturn(
 				affiliation);
 
-		Mockito.when(
-				channelManager.getNodeItems(Mockito.anyString(),
-						Mockito.anyString(), Mockito.anyInt())).thenReturn(
+		when(channelManager.getNodeItems(anyString())).thenReturn(
 				new ResultSetImpl<NodeItem>(new ArrayList<NodeItem>()));
-		Mockito.when(channelManager.nodeExists(NODE)).thenReturn(true);
+		when(channelManager.nodeExists(NODE)).thenReturn(true);
 
-		NodeViewAcl nodeViewAclMock = Mockito.mock(NodeViewAcl.class);
-		Mockito.doReturn(true)
-				.when(nodeViewAclMock)
-				.canViewNode(Mockito.anyString(),
-						Mockito.any(Affiliations.class),
-						Mockito.any(Subscriptions.class),
-						Mockito.any(AccessModels.class));
+		NodeViewAcl nodeViewAclMock = mock(NodeViewAcl.class);
+		doReturn(true).when(nodeViewAclMock).canViewNode(anyString(),
+				any(Affiliations.class), any(Subscriptions.class),
+				any(AccessModels.class));
 		itemsGet.setNodeViewAcl(nodeViewAclMock);
 
 		itemsGet.process(element, jid, request, null);
@@ -256,28 +253,23 @@ public class ItemsGetTest extends IQTestHandler {
 				.mock(NodeSubscriptionImpl.class);
 		NodeAffiliationImpl affiliation = Mockito
 				.mock(NodeAffiliationImpl.class);
-		Mockito.when(affiliation.getAffiliation()).thenReturn(
-				Affiliations.member);
-		Mockito.when(subscription.getSubscription()).thenReturn(
+		when(affiliation.getAffiliation()).thenReturn(Affiliations.member);
+		when(subscription.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(channelManager.getUserSubscription(node, jid)).thenReturn(
+		when(channelManager.getUserSubscription(node, jid)).thenReturn(
 				subscription);
-		Mockito.when(channelManager.getUserAffiliation(node, jid)).thenReturn(
+		when(channelManager.getUserAffiliation(node, jid)).thenReturn(
 				affiliation);
 
-		Mockito.when(
-				channelManager.getNodeItems(Mockito.anyString(),
-						Mockito.anyString(), Mockito.anyInt()))
-				.thenReturn(null);
-		Mockito.when(channelManager.nodeExists(node)).thenReturn(true);
+		when(channelManager.getNodeSubscriptions(anyString())).thenReturn(
+				new ResultSetImpl<NodeSubscription>(
+						new ArrayList<NodeSubscription>()));
+		when(channelManager.nodeExists(node)).thenReturn(true);
 
-		NodeViewAcl nodeViewAclMock = Mockito.mock(NodeViewAcl.class);
-		Mockito.doReturn(true)
-				.when(nodeViewAclMock)
-				.canViewNode(Mockito.anyString(),
-						Mockito.any(Affiliations.class),
-						Mockito.any(Subscriptions.class),
-						Mockito.any(AccessModels.class));
+		NodeViewAcl nodeViewAclMock = mock(NodeViewAcl.class);
+		doReturn(true).when(nodeViewAclMock).canViewNode(anyString(),
+				any(Affiliations.class), any(Subscriptions.class),
+				any(AccessModels.class));
 		itemsGet.setNodeViewAcl(nodeViewAclMock);
 
 		itemsGet.process(element, jid, request, null);
@@ -303,39 +295,31 @@ public class ItemsGetTest extends IQTestHandler {
 				.mock(NodeSubscriptionImpl.class);
 		NodeAffiliationImpl affiliation = Mockito
 				.mock(NodeAffiliationImpl.class);
-		Mockito.when(affiliation.getAffiliation()).thenReturn(
-				Affiliations.member);
-		Mockito.when(subscription.getSubscription()).thenReturn(
+		when(affiliation.getAffiliation()).thenReturn(Affiliations.member);
+		when(subscription.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(channelManager.getUserSubscription(NODE, jid)).thenReturn(
+		when(channelManager.getUserSubscription(NODE, jid)).thenReturn(
 				subscription);
-		Mockito.when(channelManager.getUserAffiliation(NODE, jid)).thenReturn(
+		when(channelManager.getUserAffiliation(NODE, jid)).thenReturn(
 				affiliation);
 
-		NodeItem item = Mockito.mock(NodeItem.class);
-		Mockito.when(item.getId()).thenReturn("id");
-		Mockito.when(item.getUID()).thenReturn("id");
-		Mockito.when(item.getNodeId()).thenReturn(NODE);
-		Mockito.when(item.getPayload())
-				.thenReturn("<entry>entry <text><entry>");
+		NodeItem item = mock(NodeItem.class);
+		when(item.getId()).thenReturn("id");
+		when(item.getUID()).thenReturn("id");
+		when(item.getNodeId()).thenReturn(NODE);
+		when(item.getPayload()).thenReturn("<entry>entry <text><entry>");
 
 		ArrayList<NodeItem> items = new ArrayList<NodeItem>();
 		items.add(item);
 		ResultSet<NodeItem> itemList = new ResultSetImpl<NodeItem>(items);
-		Mockito.doReturn(itemList)
-				.when(channelManager)
-				.getNodeItems(Mockito.anyString(), Mockito.anyString(),
-						Mockito.anyInt());
+		doReturn(itemList).when(channelManager).getNodeItems(anyString());
 
-		Mockito.when(channelManager.nodeExists(NODE)).thenReturn(true);
+		when(channelManager.nodeExists(NODE)).thenReturn(true);
 
-		NodeViewAcl nodeViewAclMock = Mockito.mock(NodeViewAcl.class);
-		Mockito.doReturn(true)
-				.when(nodeViewAclMock)
-				.canViewNode(Mockito.anyString(),
-						Mockito.any(Affiliations.class),
-						Mockito.any(Subscriptions.class),
-						Mockito.any(AccessModels.class));
+		NodeViewAcl nodeViewAclMock = mock(NodeViewAcl.class);
+		doReturn(true).when(nodeViewAclMock).canViewNode(anyString(),
+				any(Affiliations.class), any(Subscriptions.class),
+				any(AccessModels.class));
 		itemsGet.setNodeViewAcl(nodeViewAclMock);
 
 		itemsGet.process(element, jid, request, null);
@@ -360,46 +344,38 @@ public class ItemsGetTest extends IQTestHandler {
 				.mock(NodeSubscriptionImpl.class);
 		NodeAffiliationImpl affiliation = Mockito
 				.mock(NodeAffiliationImpl.class);
-		Mockito.when(affiliation.getAffiliation()).thenReturn(
-				Affiliations.member);
-		Mockito.when(subscription.getSubscription()).thenReturn(
+		when(affiliation.getAffiliation()).thenReturn(Affiliations.member);
+		when(subscription.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(channelManager.getUserSubscription(NODE, jid)).thenReturn(
+		when(channelManager.getUserSubscription(NODE, jid)).thenReturn(
 				subscription);
-		Mockito.when(channelManager.getUserAffiliation(NODE, jid)).thenReturn(
+		when(channelManager.getUserAffiliation(NODE, jid)).thenReturn(
 				affiliation);
 
-		NodeItem item = Mockito.mock(NodeItem.class);
-		Mockito.when(item.getId()).thenReturn("id");
-		Mockito.when(item.getUID()).thenReturn("id");
-		Mockito.when(item.getNodeId()).thenReturn(NODE);
-		Mockito.when(item.getPayload()).thenReturn("<entry>entry text</entry>");
+		NodeItem item = mock(NodeItem.class);
+		when(item.getId()).thenReturn("id");
+		when(item.getUID()).thenReturn("id");
+		when(item.getNodeId()).thenReturn(NODE);
+		when(item.getPayload()).thenReturn("<entry>entry text</entry>");
 
-		NodeItem item2 = Mockito.mock(NodeItem.class);
-		Mockito.when(item2.getId()).thenReturn("id2");
-		Mockito.when(item2.getUID()).thenReturn("id2");
-		Mockito.when(item2.getNodeId()).thenReturn(NODE_2);
-		Mockito.when(item2.getPayload()).thenReturn(
-				"<entry>entry 2 text</entry>");
+		NodeItem item2 = mock(NodeItem.class);
+		when(item2.getId()).thenReturn("id2");
+		when(item2.getUID()).thenReturn("id2");
+		when(item2.getNodeId()).thenReturn(NODE);
+		when(item2.getPayload()).thenReturn("<entry>entry 2 text</entry>");
 
 		ArrayList<NodeItem> items = new ArrayList<NodeItem>();
 		items.add(item);
 		items.add(item2);
 		ResultSet<NodeItem> itemList = new ResultSetImpl<NodeItem>(items);
-		Mockito.doReturn(itemList)
-				.when(channelManager)
-				.getNodeItems(Mockito.anyString(), Mockito.anyString(),
-						Mockito.anyInt());
+		doReturn(itemList).when(channelManager).getNodeItems(anyString());
 
-		Mockito.when(channelManager.nodeExists(NODE)).thenReturn(true);
+		when(channelManager.nodeExists(NODE)).thenReturn(true);
 
-		NodeViewAcl nodeViewAclMock = Mockito.mock(NodeViewAcl.class);
-		Mockito.doReturn(true)
-				.when(nodeViewAclMock)
-				.canViewNode(Mockito.anyString(),
-						Mockito.any(Affiliations.class),
-						Mockito.any(Subscriptions.class),
-						Mockito.any(AccessModels.class));
+		NodeViewAcl nodeViewAclMock = mock(NodeViewAcl.class);
+		doReturn(true).when(nodeViewAclMock).canViewNode(anyString(),
+				any(Affiliations.class), any(Subscriptions.class),
+				any(AccessModels.class));
 		itemsGet.setNodeViewAcl(nodeViewAclMock);
 
 		itemsGet.process(element, jid, request, null);
@@ -432,65 +408,60 @@ public class ItemsGetTest extends IQTestHandler {
 				.mock(NodeSubscriptionImpl.class);
 		NodeAffiliationImpl affiliation = Mockito
 				.mock(NodeAffiliationImpl.class);
-		Mockito.when(affiliation.getAffiliation()).thenReturn(
-				Affiliations.member);
-		Mockito.when(subscription.getSubscription()).thenReturn(
+		when(affiliation.getAffiliation()).thenReturn(Affiliations.member);
+		when(subscription.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(channelManager.getUserSubscription(node, jid)).thenReturn(
+		when(channelManager.getUserSubscription(node, jid)).thenReturn(
 				subscription);
-		Mockito.when(channelManager.getUserAffiliation(node, jid)).thenReturn(
+		when(channelManager.getUserAffiliation(node, jid)).thenReturn(
 				affiliation);
 
 		NodeAffiliationImpl itemAffiliation = Mockito
 				.mock(NodeAffiliationImpl.class);
-		Mockito.when(itemAffiliation.getAffiliation()).thenReturn(
-				Affiliations.member);
+		when(itemAffiliation.getAffiliation()).thenReturn(Affiliations.member);
 
 		NodeSubscriptionImpl itemSubscription1 = Mockito
 				.mock(NodeSubscriptionImpl.class);
-		Mockito.when(itemSubscription1.getSubscription()).thenReturn(
+		when(itemSubscription1.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(itemSubscription1.getUser()).thenReturn(jid);
-		Mockito.when(itemSubscription1.getNodeId()).thenReturn(node);
-		Mockito.when(itemSubscription1.getUID()).thenReturn(jid.toString());
+		when(itemSubscription1.getUser()).thenReturn(jid);
+		when(itemSubscription1.getNodeId()).thenReturn(node);
+		when(itemSubscription1.getUID()).thenReturn(jid.toString());
 
 		JID jid2 = new JID("mercutio@shakespeare.lit");
 		NodeSubscriptionImpl itemSubscription2 = Mockito
 				.mock(NodeSubscriptionImpl.class);
-		Mockito.when(itemSubscription2.getSubscription()).thenReturn(
+		when(itemSubscription2.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(itemSubscription2.getUser()).thenReturn(jid2);
-		Mockito.when(itemSubscription2.getNodeId()).thenReturn(node);
-		Mockito.when(itemSubscription2.getUID()).thenReturn(jid2.toString());
+		when(itemSubscription2.getUser()).thenReturn(jid2);
+		when(itemSubscription2.getNodeId()).thenReturn(node);
+		when(itemSubscription2.getUID()).thenReturn(jid2.toString());
 
 		JID jid3 = new JID("titania@shakespeare.lit");
 		NodeSubscriptionImpl itemSubscription3 = Mockito
 				.mock(NodeSubscriptionImpl.class);
-		Mockito.when(itemSubscription3.getSubscription()).thenReturn(
+		when(itemSubscription3.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(itemSubscription3.getUser()).thenReturn(jid3);
-		Mockito.when(itemSubscription3.getNodeId()).thenReturn(node);
-		Mockito.when(itemSubscription3.getUID()).thenReturn(jid3.toString());
+		when(itemSubscription3.getUser()).thenReturn(jid3);
+		when(itemSubscription3.getNodeId()).thenReturn(node);
+		when(itemSubscription3.getUID()).thenReturn(jid3.toString());
 
 		ArrayList<NodeSubscription> items = new ArrayList<NodeSubscription>();
 		items.add(itemSubscription1);
 		items.add(itemSubscription2);
 		items.add(itemSubscription3);
-		Mockito.doReturn(new ResultSetImpl<NodeSubscription>(items))
-				.when(channelManager).getNodeSubscriptions(node);
+		doReturn(new ResultSetImpl<NodeSubscription>(items)).when(
+				channelManager).getNodeSubscriptions(node);
 
-		Mockito.doReturn(null).when(channelManager)
-				.getUserAffiliation(node, new JID("pamela@denmark.lit"));
+		doReturn(null).when(channelManager).getUserAffiliation(node,
+				new JID("pamela@denmark.lit"));
 
-		Mockito.when(channelManager.nodeExists(node)).thenReturn(true);
+		when(channelManager.nodeExists(node)).thenReturn(true);
 
-		NodeViewAcl nodeViewAclMock = Mockito.mock(NodeViewAcl.class);
-		Mockito.doReturn(true)
-				.when(nodeViewAclMock)
-				.canViewNode(Mockito.anyString(),
-						Mockito.any(Affiliations.class),
-						Mockito.any(Subscriptions.class),
-						Mockito.any(AccessModels.class));
+		NodeViewAcl nodeViewAclMock = mock(NodeViewAcl.class);
+		doReturn(true).when(nodeViewAclMock).canViewNode(anyString(),
+				any(Affiliations.class), any(Subscriptions.class),
+				any(AccessModels.class));
 		itemsGet.setNodeViewAcl(nodeViewAclMock);
 
 		itemsGet.process(element, jid, request, null);
@@ -520,57 +491,52 @@ public class ItemsGetTest extends IQTestHandler {
 				.mock(NodeSubscriptionImpl.class);
 		NodeAffiliationImpl affiliation = Mockito
 				.mock(NodeAffiliationImpl.class);
-		Mockito.when(affiliation.getAffiliation()).thenReturn(
-				Affiliations.member);
-		Mockito.when(subscription.getSubscription()).thenReturn(
+		when(affiliation.getAffiliation()).thenReturn(Affiliations.member);
+		when(subscription.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(channelManager.getUserSubscription(node, jid)).thenReturn(
+		when(channelManager.getUserSubscription(node, jid)).thenReturn(
 				subscription);
-		Mockito.when(
-				channelManager.getUserAffiliation(Mockito.anyString(),
-						Mockito.any(JID.class))).thenReturn(affiliation);
+		when(channelManager.getUserAffiliation(anyString(), any(JID.class)))
+				.thenReturn(affiliation);
 
 		NodeSubscriptionImpl itemSubscription = Mockito
 				.mock(NodeSubscriptionImpl.class);
 		NodeAffiliationImpl itemAffiliation = Mockito
 				.mock(NodeAffiliationImpl.class);
-		Mockito.when(itemSubscription.getSubscription()).thenReturn(
+		when(itemSubscription.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
-		Mockito.when(itemSubscription.getUser()).thenReturn(jid);
-		Mockito.when(itemSubscription.getUID()).thenReturn(jid.toString());
-		Mockito.when(itemSubscription.getNodeId()).thenReturn(node);
+		when(itemSubscription.getUser()).thenReturn(jid);
+		when(itemSubscription.getUID()).thenReturn(jid.toString());
+		when(itemSubscription.getNodeId()).thenReturn(node);
 		ArrayList items = new ArrayList<NodeSubscriptionImpl>();
 		items.add(itemSubscription);
-		Mockito.doReturn(new ResultSetImpl<NodeSubscription>(items))
-				.when(channelManager).getNodeSubscriptions(node);
+		doReturn(new ResultSetImpl<NodeSubscription>(items)).when(
+				channelManager).getNodeSubscriptions(node);
 
 		NodeSubscriptionImpl childItemSubscription = Mockito
 				.mock(NodeSubscriptionImpl.class);
 		NodeAffiliationImpl childItemAffiliation = Mockito
 				.mock(NodeAffiliationImpl.class);
-		Mockito.when(childItemAffiliation.getAffiliation()).thenReturn(
+		when(childItemAffiliation.getAffiliation()).thenReturn(
 				Affiliations.member);
-		Mockito.when(childItemSubscription.getUser()).thenReturn(jid);
-		Mockito.when(childItemSubscription.getUID()).thenReturn(jid.toString());
-		Mockito.when(childItemSubscription.getNodeId()).thenReturn(
+		when(childItemSubscription.getUser()).thenReturn(jid);
+		when(childItemSubscription.getUID()).thenReturn(jid.toString());
+		when(childItemSubscription.getNodeId()).thenReturn(
 				"/user/juliet@shakespeare.lit/posts");
-		Mockito.when(childItemSubscription.getSubscription()).thenReturn(
+		when(childItemSubscription.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
 		ArrayList<NodeSubscription> childItems = new ArrayList<NodeSubscription>();
 		childItems.add(childItemSubscription);
-		Mockito.doReturn(new ResultSetImpl<NodeSubscription>(childItems))
-				.when(channelManager)
-				.getUserSubscriptions(new JID("juliet@shakespeare.lit"));
+		doReturn(new ResultSetImpl<NodeSubscription>(childItems)).when(
+				channelManager).getUserSubscriptions(
+				new JID("juliet@shakespeare.lit"));
 
-		Mockito.when(channelManager.nodeExists(node)).thenReturn(true);
+		when(channelManager.nodeExists(node)).thenReturn(true);
 
-		NodeViewAcl nodeViewAclMock = Mockito.mock(NodeViewAcl.class);
-		Mockito.doReturn(true)
-				.when(nodeViewAclMock)
-				.canViewNode(Mockito.anyString(),
-						Mockito.any(Affiliations.class),
-						Mockito.any(Subscriptions.class),
-						Mockito.any(AccessModels.class));
+		NodeViewAcl nodeViewAclMock = mock(NodeViewAcl.class);
+		doReturn(true).when(nodeViewAclMock).canViewNode(anyString(),
+				any(Affiliations.class), any(Subscriptions.class),
+				any(AccessModels.class));
 		itemsGet.setNodeViewAcl(nodeViewAclMock);
 
 		itemsGet.process(element, jid, request, null);
@@ -613,5 +579,117 @@ public class ItemsGetTest extends IQTestHandler {
 						.attributeValue(
 								new QName("subscription", new Namespace("ns2",
 										JabberPubsub.NAMESPACE_URI))));
+	}
+
+	@Test
+	public void testItemsGetWithRSMFirst10() throws Exception {
+		createNodeWithXItems(NODE, 30);
+
+		Element elRSM = DocumentHelper.createElement(QName.get("set",
+				ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+
+		elRSM.addElement("max").setText("10");
+
+		itemsGet.process(element, jid, request, elRSM);
+		Packet response = queue.poll(100, TimeUnit.MILLISECONDS);
+		Element element = response.getElement();
+
+		@SuppressWarnings("unchecked")
+		List<Element> itemEls = element.element("pubsub").element("items")
+				.elements("item");
+
+		for (int i = 0; i < 10; ++i) {
+			assertEquals("Incorrect item id at position " + i, "id" + i,
+					itemEls.get(i).attributeValue("id"));
+		}
+
+		Element rsmElement = response.getElement().element("pubsub").element(
+				QName.get("set", ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+
+		assertEquals("Unexpected count value returned", "30",
+				rsmElement.element("count").getText());
+		assertEquals("Unexpected first value returned", "id0", rsmElement
+				.element("first").getText());
+		assertEquals("Unexpected last value returned", "id9", rsmElement
+				.element("last").getText());
+	}
+
+	@Test
+	public void testItemsGetWithRSMMax12Offset5() throws Exception {
+		createNodeWithXItems(NODE, 30);
+
+		Element elRSM = DocumentHelper.createElement(QName.get("set",
+				ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+
+		elRSM.addElement("max").setText("12");
+		elRSM.addElement("after").setText("id4");
+
+		itemsGet.process(element, jid, request, elRSM);
+		Packet response = queue.poll(100, TimeUnit.MILLISECONDS);
+		Element element = response.getElement();
+
+		@SuppressWarnings("unchecked")
+		List<Element> itemEls = element.element("pubsub").element("items")
+				.elements("item");
+
+		for (int i = 0; i < 12; ++i) {
+			assertEquals("Incorrect item id at position " + i, "id" + (i + 5),
+					itemEls.get(i).attributeValue("id"));
+		}
+
+		Element rsmElement = response.getElement().element("pubsub").element(
+				QName.get("set", ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+
+		assertEquals("Unexpected count value returned", "30",
+				rsmElement.element("count").getText());
+		assertEquals("Unexpected first value returned", "id5", rsmElement
+				.element("first").getText());
+		assertEquals("Unexpected last value returned", "id16", rsmElement
+				.element("last").getText());
+	}
+
+	private void createNodeWithXItems(final String node, final int numItems)
+			throws Exception {
+		AccessModels accessModel = AccessModels.authorize;
+
+		element.addAttribute("node", node);
+
+		NodeSubscriptionImpl subscription = Mockito
+				.mock(NodeSubscriptionImpl.class);
+		NodeAffiliationImpl affiliation = Mockito
+				.mock(NodeAffiliationImpl.class);
+		when(affiliation.getAffiliation()).thenReturn(Affiliations.member);
+		when(subscription.getSubscription()).thenReturn(
+				Subscriptions.subscribed);
+		when(channelManager.getUserSubscription(node, jid)).thenReturn(
+				subscription);
+		when(channelManager.getUserAffiliation(node, jid)).thenReturn(
+				affiliation);
+
+		// Create 30 node items
+		ArrayList<NodeItem> items = new ArrayList<NodeItem>(numItems);
+
+		for (int i = 0; i < numItems; ++i) {
+			NodeItem item = mock(NodeItem.class);
+			when(item.getId()).thenReturn("id" + i);
+			when(item.getUID()).thenReturn("id" + i);
+			when(item.getNodeId()).thenReturn(node);
+			when(item.getPayload()).thenReturn(
+					"<entry>entry text " + i + "</entry>");
+			items.add(item);
+		}
+
+		ResultSet<NodeItem> itemList = new ResultSetImpl<NodeItem>(items);
+		
+		when(channelManager.getNodeItems(node)).thenReturn(itemList);
+
+		when(channelManager.nodeExists(node)).thenReturn(true);
+
+		NodeViewAcl nodeViewAclMock = mock(NodeViewAcl.class);
+		when(
+				nodeViewAclMock.canViewNode(eq(node), any(Affiliations.class),
+						any(Subscriptions.class), any(AccessModels.class)))
+				.thenReturn(true);
+		itemsGet.setNodeViewAcl(nodeViewAclMock);
 	}
 }

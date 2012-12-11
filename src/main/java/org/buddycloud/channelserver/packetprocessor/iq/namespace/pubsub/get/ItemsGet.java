@@ -23,6 +23,7 @@
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.get;
 
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -102,7 +103,7 @@ public class ItemsGet implements PubSubElementProcessor {
 		resultSetManagement = rsm;
 
 		if ((resultSetManagement == null)
-				&& (false == ResultSet.isValidRSMRequest(resultSetManagement))) {
+				|| (false == ResultSet.isValidRSMRequest(resultSetManagement))) {
 			resultSetManagement = null;
 		}
 
@@ -234,8 +235,22 @@ public class ItemsGet implements PubSubElementProcessor {
 	private Element getNodeItems(Element items) throws NodeStoreException {
 
 		ResultSet<NodeItem> nodeItems = channelManager.getNodeItems(node);
-		List<NodeItem> rsmNodeItems = nodeItems
-				.applyRSMDirectives(resultSetManagement);
+
+		Iterable<NodeItem> rsmNodeItems;
+
+		int maxItemCount;
+
+		if (resultSetManagement == null) {
+			rsmNodeItems = nodeItems;
+			maxItemCount = nodeItems.size();
+		} else {
+			List<NodeItem> rsmNodeItemList = nodeItems
+					.applyRSMDirectives(resultSetManagement);
+			maxItemCount = rsmNodeItemList.size();
+			rsmNodeItems = rsmNodeItemList;
+		}
+
+		List<NodeItem> actualNodeItems = new ArrayList<NodeItem>(maxItemCount);
 
 		for (NodeItem nodeItem : rsmNodeItems) {
 			try {
@@ -244,12 +259,13 @@ public class ItemsGet implements PubSubElementProcessor {
 				Element item = items.addElement("item");
 				item.addAttribute("id", nodeItem.getId());
 				item.add(entry);
+				actualNodeItems.add(nodeItem);
 			} catch (DocumentException e) {
 				LOGGER.error("Error parsing a node entry, ignoring. "
 						+ nodeItem);
 			}
 		}
-		return nodeItems.generateSetElementFromResults(rsmNodeItems);
+		return nodeItems.generateSetElementFromResults(actualNodeItems);
 	}
 
 	/**
@@ -260,8 +276,23 @@ public class ItemsGet implements PubSubElementProcessor {
 
 		ResultSet<NodeSubscription> subscribers = channelManager
 				.getNodeSubscriptions(node);
-		List<NodeSubscription> rsmSubscribers = subscribers
-				.applyRSMDirectives(resultSetManagement);
+
+		Iterable<NodeSubscription> rsmSubscribers;
+
+		int maxItemCount;
+
+		if (resultSetManagement == null) {
+			rsmSubscribers = subscribers;
+			maxItemCount = subscribers.size();
+		} else {
+			List<NodeSubscription> rsmNodeItemList = subscribers
+					.applyRSMDirectives(resultSetManagement);
+			maxItemCount = rsmNodeItemList.size();
+			rsmSubscribers = rsmNodeItemList;
+		}
+
+		List<NodeSubscription> actualSubscribers = new ArrayList<NodeSubscription>(
+				maxItemCount);
 
 		Element jidItem;
 		Element query;
@@ -273,8 +304,9 @@ public class ItemsGet implements PubSubElementProcessor {
 			query = jidItem.addElement("query");
 			query.addNamespace("", JabberPubsub.NS_DISCO_ITEMS);
 			addSubscriptionItems(query, subscriber.getUser());
+			actualSubscribers.add(subscriber);
 		}
-		return subscribers.generateSetElementFromResults(rsmSubscribers);
+		return subscribers.generateSetElementFromResults(actualSubscribers);
 	}
 
 	private void addSubscriptionItems(Element query, JID subscriber)
