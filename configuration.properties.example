@@ -6,9 +6,4 @@ xmpp.secretkey=2255998899442277
 server.domain=xmpp.lobstermonster.org
 server.domain.topics=topics.lobstermonster.org
 
-jdbc.proxool.driver-url=jdbc:hsqldb:.
-jdbc.proxool.driver-class=org.hsqldb.jdbcDriver
-jdbc.user=username
-jdbc.password=password
-jdbc.proxool.maximum-connection-count=10
-jdbc.proxool.house-keeping-test-sql=select CURRENT_DATE
+xmpp.stanza.max-size	= 64000

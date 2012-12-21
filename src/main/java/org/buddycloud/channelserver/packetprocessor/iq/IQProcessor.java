@@ -28,6 +28,7 @@ import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.log4j.Logger;
+import org.buddycloud.channelserver.XmppException;
 import org.buddycloud.channelserver.channel.ChannelManager;
 import org.buddycloud.channelserver.packetprocessor.PacketProcessor;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.discoinfo.JabberDiscoInfo;
@@ -81,8 +82,14 @@ public class IQProcessor implements PacketProcessor<IQ> {
 					&& namespaceProcessor != null) {
 				logger.trace("Using namespace processor: "
 						+ namespaceProcessor.getClass().getName());
-				namespaceProcessor.process(packet);
-				return;
+				try {
+					namespaceProcessor.process(packet);
+					return;
+				} catch(XmppException e) {
+					IQ response = IQ.createResultIQ(packet);
+					response.setError(e.getPacketError());
+					outQueue.add(response);
+				}
 	
 			}
 		}

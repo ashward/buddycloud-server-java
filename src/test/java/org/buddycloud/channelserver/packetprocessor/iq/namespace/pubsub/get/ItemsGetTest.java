@@ -23,6 +23,9 @@
 package org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.get;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -38,9 +41,9 @@ import java.util.concurrent.TimeUnit;
 
 import junit.framework.Assert;
 
+import org.buddycloud.channelserver.XmppException;
 import org.buddycloud.channelserver.channel.ChannelManager;
 import org.buddycloud.channelserver.db.exception.NodeStoreException;
-import org.buddycloud.channelserver.db.mock.Mock;
 import org.buddycloud.channelserver.packetHandler.iq.IQTestHandler;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.JabberPubsub;
 import org.buddycloud.channelserver.pubsub.accessmodel.AccessModels;
@@ -59,7 +62,9 @@ import org.dom4j.QName;
 import org.dom4j.tree.BaseElement;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.xmpp.packet.IQ;
 import org.xmpp.packet.JID;
 import org.xmpp.packet.Packet;
@@ -72,23 +77,27 @@ public class ItemsGetTest extends IQTestHandler {
 	private static final String NODE = "/user/pamela@denmark.lit/posts";
 	private static final JID jid = new JID("juliet@shakespeare.lit");
 
+	private static final int MAX_STANZA_SIZE = 65000;
+	
 	private IQ request;
 	private ItemsGet itemsGet;
 	private Element element;
 	private BlockingQueue<Packet> queue = new LinkedBlockingQueue<Packet>();
-
+	
+	@Mock
 	private ChannelManager channelManager;
 
 	@Before
 	public void setUp() throws Exception {
-
+		MockitoAnnotations.initMocks(this);
+		
 		queue = new LinkedBlockingQueue<Packet>();
 		itemsGet = new ItemsGet(queue, channelManager);
 		request = readStanzaAsIq("/iq/pubsub/items/request.stanza");
 		element = new BaseElement("items");
 
-		channelManager = mock(Mock.class);
 		when(channelManager.isLocalNode(anyString())).thenReturn(true);
+		when(channelManager.getMaximumStanzaSize()).thenReturn(MAX_STANZA_SIZE);
 		itemsGet.setChannelManager(channelManager);
 	}
 
@@ -204,8 +213,6 @@ public class ItemsGetTest extends IQTestHandler {
 	@Test
 	public void testStandardNodeWithNoItemsReturnsNoItems() throws Exception {
 
-		AccessModels accessModel = AccessModels.authorize;
-
 		element.addAttribute("node", NODE);
 
 		NodeSubscriptionImpl subscription = Mockito
@@ -287,8 +294,6 @@ public class ItemsGetTest extends IQTestHandler {
 	@Test
 	public void testUnparsableNodeEntryIsIgnoredInItemsResponse()
 			throws Exception {
-		AccessModels accessModel = AccessModels.authorize;
-
 		element.addAttribute("node", NODE);
 
 		NodeSubscriptionImpl subscription = Mockito
@@ -336,8 +341,6 @@ public class ItemsGetTest extends IQTestHandler {
 
 	@Test
 	public void testPostsNodeReturnsItemsAsExpected() throws Exception {
-		AccessModels accessModel = AccessModels.authorize;
-
 		element.addAttribute("node", NODE);
 
 		NodeSubscriptionImpl subscription = Mockito
@@ -399,7 +402,6 @@ public class ItemsGetTest extends IQTestHandler {
 	@Test
 	public void testSubscriberThatHasNoSubscribersDoesNotCauseError()
 			throws Exception {
-		AccessModels accessModel = AccessModels.authorize;
 		String node = NODE.replace("posts", "subscriptions");
 
 		element.addAttribute("node", node);
@@ -482,7 +484,6 @@ public class ItemsGetTest extends IQTestHandler {
 	@Test
 	public void testSubscriptionsNodeReturnsItemsAsExpected() throws Exception {
 
-		AccessModels accessModel = AccessModels.authorize;
 		String node = NODE.replace("posts", "subscriptions");
 
 		element.addAttribute("node", node);
@@ -501,14 +502,15 @@ public class ItemsGetTest extends IQTestHandler {
 
 		NodeSubscriptionImpl itemSubscription = Mockito
 				.mock(NodeSubscriptionImpl.class);
-		NodeAffiliationImpl itemAffiliation = Mockito
+		Mockito
 				.mock(NodeAffiliationImpl.class);
 		when(itemSubscription.getSubscription()).thenReturn(
 				Subscriptions.subscribed);
 		when(itemSubscription.getUser()).thenReturn(jid);
 		when(itemSubscription.getUID()).thenReturn(jid.toString());
 		when(itemSubscription.getNodeId()).thenReturn(node);
-		ArrayList items = new ArrayList<NodeSubscriptionImpl>();
+		
+		ArrayList<NodeSubscription> items = new ArrayList<NodeSubscription>();
 		items.add(itemSubscription);
 		doReturn(new ResultSetImpl<NodeSubscription>(items)).when(
 				channelManager).getNodeSubscriptions(node);
@@ -583,7 +585,7 @@ public class ItemsGetTest extends IQTestHandler {
 
 	@Test
 	public void testItemsGetWithRSMFirst10() throws Exception {
-		createNodeWithXItems(NODE, 30);
+		createNodeWithNItems(NODE, 30);
 
 		Element elRSM = DocumentHelper.createElement(QName.get("set",
 				ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
@@ -598,16 +600,22 @@ public class ItemsGetTest extends IQTestHandler {
 		List<Element> itemEls = element.element("pubsub").element("items")
 				.elements("item");
 
+		assertEquals("Incorrect number of items returned", 10, itemEls.size());
+
 		for (int i = 0; i < 10; ++i) {
 			assertEquals("Incorrect item id at position " + i, "id" + i,
 					itemEls.get(i).attributeValue("id"));
 		}
 
-		Element rsmElement = response.getElement().element("pubsub").element(
-				QName.get("set", ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+		Element rsmElement = response
+				.getElement()
+				.element("pubsub")
+				.element(
+						QName.get("set",
+								ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
 
-		assertEquals("Unexpected count value returned", "30",
-				rsmElement.element("count").getText());
+		assertEquals("Unexpected count value returned", "30", rsmElement
+				.element("count").getText());
 		assertEquals("Unexpected first value returned", "id0", rsmElement
 				.element("first").getText());
 		assertEquals("Unexpected last value returned", "id9", rsmElement
@@ -616,7 +624,7 @@ public class ItemsGetTest extends IQTestHandler {
 
 	@Test
 	public void testItemsGetWithRSMMax12Offset5() throws Exception {
-		createNodeWithXItems(NODE, 30);
+		createNodeWithNItems(NODE, 30);
 
 		Element elRSM = DocumentHelper.createElement(QName.get("set",
 				ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
@@ -632,26 +640,121 @@ public class ItemsGetTest extends IQTestHandler {
 		List<Element> itemEls = element.element("pubsub").element("items")
 				.elements("item");
 
+		assertEquals("Incorrect number of items returned", 12, itemEls.size());
+
 		for (int i = 0; i < 12; ++i) {
 			assertEquals("Incorrect item id at position " + i, "id" + (i + 5),
 					itemEls.get(i).attributeValue("id"));
 		}
 
-		Element rsmElement = response.getElement().element("pubsub").element(
-				QName.get("set", ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+		Element rsmElement = response
+				.getElement()
+				.element("pubsub")
+				.element(
+						QName.get("set",
+								ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
 
-		assertEquals("Unexpected count value returned", "30",
-				rsmElement.element("count").getText());
+		assertEquals("Unexpected count value returned", "30", rsmElement
+				.element("count").getText());
 		assertEquals("Unexpected first value returned", "id5", rsmElement
 				.element("first").getText());
 		assertEquals("Unexpected last value returned", "id16", rsmElement
 				.element("last").getText());
 	}
 
-	private void createNodeWithXItems(final String node, final int numItems)
+	@Test
+	public void testItemsGetWithRSMRequestingMoreItemsThanAvailable()
 			throws Exception {
-		AccessModels accessModel = AccessModels.authorize;
+		createNodeWithNItems(NODE, 12);
 
+		Element elRSM = DocumentHelper.createElement(QName.get("set",
+				ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+
+		elRSM.addElement("max").setText("15");
+		elRSM.addElement("after").setText("id3");
+
+		itemsGet.process(element, jid, request, elRSM);
+		Packet response = queue.poll(100, TimeUnit.MILLISECONDS);
+		Element element = response.getElement();
+
+		@SuppressWarnings("unchecked")
+		List<Element> itemEls = element.element("pubsub").element("items")
+				.elements("item");
+		
+		assertEquals("Incorrect number of items returned", 8, itemEls.size());
+
+		// We would expect 8 items back
+		for (int i = 0; i < 8; ++i) {
+			assertEquals("Incorrect item id at position " + i, "id" + (i + 4),
+					itemEls.get(i).attributeValue("id"));
+		}
+
+		Element rsmElement = response
+				.getElement()
+				.element("pubsub")
+				.element(
+						QName.get("set",
+								ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+
+		assertEquals("Unexpected count value returned", "12", rsmElement
+				.element("count").getText());
+		assertEquals("Unexpected first value returned", "id4", rsmElement
+				.element("first").getText());
+		assertEquals("Unexpected last value returned", "id11", rsmElement
+				.element("last").getText());
+	}
+	
+	@Test
+	public void testItemsGetWithRSMRequestingFromNonExistantItemReturnsError()
+			throws Exception {
+		createNodeWithNItems(NODE, 15);
+
+		Element elRSM = DocumentHelper.createElement(QName.get("set",
+				ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+
+		elRSM.addElement("max").setText("10");
+		elRSM.addElement("after").setText("doesntexist");
+
+		try {
+			itemsGet.process(element, jid, request, elRSM);
+			
+			fail("Expected XmppException not caught");
+		} catch(XmppException e) {
+			PacketError error = e.getPacketError();
+			assertNotNull("No error packet returned", error);
+			assertEquals("Wrong error type returned", PacketError.Type.cancel, error.getType());
+			assertEquals("Wrong error condition returned", PacketError.Condition.item_not_found, error.getCondition());
+		}
+	}
+	
+	@Test
+	public void testItemsGetWithOversizeStanza()
+			throws Exception {
+		int stanzaLimit = 65000;	// bytes
+		
+		when(channelManager.getMaximumStanzaSize()).thenReturn(stanzaLimit);
+		
+		createNodeWithNItems(NODE, 4000);
+
+		Element elRSM = DocumentHelper.createElement(QName.get("set",
+				ResultSet.NAMESPACE_RESULT_SET_MANAGEMENT));
+
+		elRSM.addElement("max").setText("2000");
+
+		itemsGet.process(element, jid, request, elRSM);
+		Packet response = queue.poll(100, TimeUnit.MILLISECONDS);
+		Element element = response.getElement();
+
+		int stanzaLength = element.asXML().getBytes("UTF-8").length;
+		
+		assertTrue("Stanza is larger than allowed size (" + stanzaLength + " > " + stanzaLimit + ")", stanzaLength <= stanzaLimit);
+
+		// As long as we're within 1k of the limit then we'll let is pass
+		assertTrue("Stanza is smaller than it could be (" + stanzaLength + ")", stanzaLength >= (stanzaLimit - 1000));
+	}
+
+	private void createNodeWithNItems(final String node, final int n)
+			throws Exception {
 		element.addAttribute("node", node);
 
 		NodeSubscriptionImpl subscription = Mockito
@@ -667,9 +770,9 @@ public class ItemsGetTest extends IQTestHandler {
 				affiliation);
 
 		// Create 30 node items
-		ArrayList<NodeItem> items = new ArrayList<NodeItem>(numItems);
+		ArrayList<NodeItem> items = new ArrayList<NodeItem>(n);
 
-		for (int i = 0; i < numItems; ++i) {
+		for (int i = 0; i < n; ++i) {
 			NodeItem item = mock(NodeItem.class);
 			when(item.getId()).thenReturn("id" + i);
 			when(item.getUID()).thenReturn("id" + i);
@@ -680,7 +783,7 @@ public class ItemsGetTest extends IQTestHandler {
 		}
 
 		ResultSet<NodeItem> itemList = new ResultSetImpl<NodeItem>(items);
-		
+
 		when(channelManager.getNodeItems(node)).thenReturn(itemList);
 
 		when(channelManager.nodeExists(node)).thenReturn(true);

@@ -86,7 +86,9 @@ public class JDBCNodeStoreTest {
 	private static final String TEST_SERVER1_NODE1_ITEM5_ID = "a5";
 	private static final String TEST_SERVER1_NODE1_ITEM5_CONTENT = "Test 5";
 
+	@SuppressWarnings("unused")
 	private static final String TEST_SERVER1_HOSTNAME = "server1";
+	@SuppressWarnings("unused")
 	private static final String TEST_SERVER2_HOSTNAME = "server2";
 
 	private static final HashMap<String, String> TEST_SERVER1_NODE1_CONF = new HashMap<String, String>() {
@@ -99,6 +101,10 @@ public class JDBCNodeStoreTest {
 	private static final String TEST_SERVER1_NODE1_CONFIG1_KEY = "config1";
 	private static final String TEST_SERVER1_NODE1_CONFIG1_VALUE = "Value of config1";
 
+	private static final String TEST_SERVER1_NODE1_CONFIG2_KEY = "config2";
+	private static final String TEST_SERVER1_NODE1_CONFIG2_VALUE = "Value of config2";
+
+	@SuppressWarnings("unused")
 	private static final JID TEST_SERVER1_CHANNELS_JID = new JID(
 			"channels.server1");
 	private static final JID TEST_SERVER2_CHANNELS_JID = new JID(
@@ -110,6 +116,7 @@ public class JDBCNodeStoreTest {
 	private static final JID TEST_SERVER1_USER2_JID = new JID("user2@server1");
 
 	private static final JID TEST_SERVER2_USER1_JID = new JID("user1@server2");
+	@SuppressWarnings("unused")
 	private static final JID TEST_SERVER2_USER2_JID = new JID("user2@server2");
 	private static final JID TEST_SERVER2_USER3_JID = new JID("user3@server2");
 
@@ -158,8 +165,8 @@ public class JDBCNodeStoreTest {
 	@Test
 	public void testCreateNodeWithConfig() throws Exception {
 		HashMap<String, String> config = new HashMap<String, String>();
-		config.put("CONFIG1", "Value of CONFIG1");
-		config.put("CONFIG2", "Value of CONFIG2");
+		config.put(TEST_SERVER1_NODE1_CONFIG1_KEY, TEST_SERVER1_NODE1_CONFIG1_VALUE);
+		config.put(TEST_SERVER1_NODE1_CONFIG2_KEY, TEST_SERVER1_NODE1_CONFIG2_VALUE);
 
 		store.createNode(TEST_SERVER1_USER1_JID, TEST_SERVER1_NODE1_ID, config);
 
@@ -175,14 +182,14 @@ public class JDBCNodeStoreTest {
 
 		expected = new HashMap<String, Object>();
 		expected.put("node", TEST_SERVER1_NODE1_ID);
-		expected.put("key", "CONFIG1");
-		expected.put("value", "Value of CONFIG1");
+		expected.put("key", TEST_SERVER1_NODE1_CONFIG1_KEY);
+		expected.put("value", TEST_SERVER1_NODE1_CONFIG1_VALUE);
 		dbTester.assertions().assertTableContains("node_config", expected);
 
 		expected = new HashMap<String, Object>();
 		expected.put("node", TEST_SERVER1_NODE1_ID);
-		expected.put("key", "CONFIG2");
-		expected.put("value", "Value of CONFIG2");
+		expected.put("key", TEST_SERVER1_NODE1_CONFIG2_KEY);
+		expected.put("value", TEST_SERVER1_NODE1_CONFIG2_VALUE);
 		dbTester.assertions().assertTableContains("node_config", expected);
 	}
 
@@ -220,14 +227,14 @@ public class JDBCNodeStoreTest {
 	public void testSetNodeConfValueExistingConf() throws Exception {
 		dbTester.loadData("node_1");
 
-		store.setNodeConfValue(TEST_SERVER1_NODE1_ID, "config1",
+		store.setNodeConfValue(TEST_SERVER1_NODE1_ID, TEST_SERVER1_NODE1_CONFIG1_KEY,
 				"updated config1");
 
 		dbTester.assertions().assertTableContains("node_config",
 				new HashMap<String, Object>() {
 					{
 						put("node", TEST_SERVER1_NODE1_ID);
-						put("key", "config1");
+						put("key", TEST_SERVER1_NODE1_CONFIG1_KEY);
 						put("value", "updated config1");
 					}
 				});
@@ -237,8 +244,8 @@ public class JDBCNodeStoreTest {
 				new HashMap<String, Object>() {
 					{
 						put("node", TEST_SERVER1_NODE1_ID);
-						put("key", "config1");
-						put("value", "Value of config1");
+						put("key", TEST_SERVER1_NODE1_CONFIG1_KEY);
+						put("value", TEST_SERVER1_NODE1_CONFIG1_VALUE);
 					}
 				}, 0);
 	}

@@ -231,7 +231,11 @@ public class Mock implements ChannelManager {
 	@Override
 	public ResultSet<NodeSubscription> getNodeSubscriptionListeners(
 			String nodeId) throws NodeStoreException {
-		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public int getMaximumStanzaSize() {
+		return 0;
 	}
 }

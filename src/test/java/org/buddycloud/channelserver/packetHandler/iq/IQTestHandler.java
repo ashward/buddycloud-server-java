@@ -26,11 +26,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.Assert;
-import junit.framework.TestCase;
 
 import org.apache.commons.io.IOUtils;
 import org.buddycloud.channelserver.Configuration;
@@ -39,7 +37,6 @@ import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 import org.xmpp.packet.IQ;
-import org.xmpp.packet.IQ.Type;
 
 public class IQTestHandler
 {
@@ -47,7 +44,7 @@ public class IQTestHandler
     public final static String  STANZA_PATH              = "src/test/resources/stanzas";
     public final static String  LOGGER_PROPERTIES        = "src/test/resources/log4j.properties";
     
-    public static Properties readConf() 
+    public static Configuration readConf() 
         throws FileNotFoundException, IOException
     {
         Configuration conf = Configuration.getInstance();

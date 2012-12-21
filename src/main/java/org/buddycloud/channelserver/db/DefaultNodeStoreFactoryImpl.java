@@ -24,8 +24,8 @@ package org.buddycloud.channelserver.db;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Properties;
 
+import org.buddycloud.channelserver.Configuration;
 import org.buddycloud.channelserver.db.exception.NodeStoreException;
 import org.buddycloud.channelserver.db.jdbc.JDBCNodeStore;
 import org.buddycloud.channelserver.db.jdbc.JDBCNodeStore.NodeStoreSQLDialect;
@@ -38,9 +38,9 @@ public class DefaultNodeStoreFactoryImpl implements NodeStoreFactory {
 
 	private final NodeStoreSQLDialect dialect;
 
-	public DefaultNodeStoreFactoryImpl(final Properties configuration)
+	public DefaultNodeStoreFactoryImpl(final Configuration conf)
 			throws NodeStoreException {
-		String dialectClass = configuration.getProperty(
+		String dialectClass = conf.getProperty(
 				CONFIGURATION_JDBC_DIALECT,
 				Sql92NodeStoreDialect.class.getName());
 

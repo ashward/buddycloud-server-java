@@ -29,9 +29,11 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.log4j.Logger;
+import org.buddycloud.channelserver.XmppException;
 import org.buddycloud.channelserver.channel.ChannelManager;
 import org.buddycloud.channelserver.channel.node.configuration.field.AccessModel;
 import org.buddycloud.channelserver.db.exception.NodeStoreException;
+import org.buddycloud.channelserver.exception.GenericXmppException;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.JabberPubsub;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.PubSubElementProcessor;
 import org.buddycloud.channelserver.packetprocessor.iq.namespace.pubsub.PubSubGet;
@@ -41,6 +43,7 @@ import org.buddycloud.channelserver.pubsub.model.NodeAffiliation;
 import org.buddycloud.channelserver.pubsub.model.NodeItem;
 import org.buddycloud.channelserver.pubsub.model.NodeSubscription;
 import org.buddycloud.channelserver.pubsub.subscription.Subscriptions;
+import org.buddycloud.channelserver.utils.StringUtils;
 import org.buddycloud.channelserver.utils.node.NodeAclRefuseReason;
 import org.buddycloud.channelserver.utils.node.NodeViewAcl;
 import org.dom4j.DocumentException;
@@ -60,6 +63,8 @@ import org.xmpp.resultsetmanagement.ResultSet;
 public class ItemsGet implements PubSubElementProcessor {
 	private static final Logger LOGGER = Logger.getLogger(ItemsGet.class);
 
+	private static final int ESTIMATED_RSM_XML_SIZE = 400; // Bytes
+
 	private final BlockingQueue<Packet> outQueue;
 
 	private ChannelManager channelManager;
@@ -72,6 +77,7 @@ public class ItemsGet implements PubSubElementProcessor {
 	private Element resultSetManagement;
 	private NodeViewAcl nodeViewAcl;
 	private Map<String, String> nodeDetails;
+	private int availableStanzaSize;
 
 	public ItemsGet(BlockingQueue<Packet> outQueue,
 			ChannelManager channelManager) {
@@ -141,6 +147,8 @@ public class ItemsGet implements PubSubElementProcessor {
 				return;
 			}
 			getItems();
+		} catch (XmppException e) {
+			throw (e);
 		} catch (NodeStoreException e) {
 			setErrorCondition(PacketError.Type.wait,
 					PacketError.Condition.internal_server_error);
@@ -174,8 +182,8 @@ public class ItemsGet implements PubSubElementProcessor {
 	}
 
 	private void getItems() throws Exception {
-		Element pubsub = new DOMElement(PubSubGet.ELEMENT_NAME,
-				new org.dom4j.Namespace("", JabberPubsub.NAMESPACE_URI));
+		Element pubsub = new DOMElement(QName.get(PubSubGet.ELEMENT_NAME,
+				JabberPubsub.NAMESPACE_URI));
 
 		Element items = pubsub.addElement("items");
 		items.addAttribute("node", node);
@@ -184,7 +192,14 @@ public class ItemsGet implements PubSubElementProcessor {
 		entry = null;
 		Element rsmElement;
 
-		if (node.substring(node.length() - 13).equals("subscriptions")) {
+		// Get the packet size so far (i.e. with no actual items).
+		int packetSize = StringUtils.countUTF8Bytes(reply.getElement().asXML())
+				+ ESTIMATED_RSM_XML_SIZE;
+
+		availableStanzaSize = channelManager.getMaximumStanzaSize()
+				- packetSize;
+
+		if (node.endsWith("subscriptions")) {
 			rsmElement = getSubscriptionItems(items);
 		} else {
 			rsmElement = getNodeItems(items);
@@ -244,10 +259,18 @@ public class ItemsGet implements PubSubElementProcessor {
 			rsmNodeItems = nodeItems;
 			maxItemCount = nodeItems.size();
 		} else {
-			List<NodeItem> rsmNodeItemList = nodeItems
-					.applyRSMDirectives(resultSetManagement);
-			maxItemCount = rsmNodeItemList.size();
-			rsmNodeItems = rsmNodeItemList;
+			try {
+				List<NodeItem> rsmNodeItemList = nodeItems
+						.applyRSMDirectives(resultSetManagement);
+				maxItemCount = rsmNodeItemList.size();
+				rsmNodeItems = rsmNodeItemList;
+			} catch (NullPointerException e) { // Seems to throw an NPE if there
+												// is an issue with any
+												// parameters (e.g. unknown
+												// "first" id).
+				throw new GenericXmppException(PacketError.Type.cancel,
+						PacketError.Condition.item_not_found, e);
+			}
 		}
 
 		List<NodeItem> actualNodeItems = new ArrayList<NodeItem>(maxItemCount);
@@ -258,6 +281,19 @@ public class ItemsGet implements PubSubElementProcessor {
 						.getRootElement();
 				Element item = items.addElement("item");
 				item.addAttribute("id", nodeItem.getId());
+
+				// 28 == "<item id=\"\"> xmlns=""</item>".length()
+				int size = 28 + StringUtils.countUTF8Bytes(nodeItem.getId()) + StringUtils.countUTF8Bytes(entry.asXML());
+				
+				availableStanzaSize -= size;
+
+				// If we have run out of room in this stanza
+				if (availableStanzaSize < 0) {
+					availableStanzaSize += size;
+					items.remove(item);
+					break;
+				}
+
 				item.add(entry);
 				actualNodeItems.add(nodeItem);
 			} catch (DocumentException e) {

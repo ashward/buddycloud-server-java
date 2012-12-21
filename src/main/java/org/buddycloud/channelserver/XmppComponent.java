@@ -22,28 +22,25 @@
 
 package org.buddycloud.channelserver;
 
-import java.util.Properties;
-
 import org.apache.log4j.Logger;
 import org.jivesoftware.whack.ExternalComponentManager;
-import org.xmpp.component.ComponentException;
 import org.logicalcobwebs.proxool.ProxoolException;
 import org.logicalcobwebs.proxool.configuration.PropertyConfigurator;
+import org.xmpp.component.ComponentException;
 
 public class XmppComponent {
 
 	private static final String DATABASE_CONFIGURATION_FILE = "db.properties";
 	
-	@SuppressWarnings("unused")
 	private static final Logger LOGGER = Logger.getLogger(XmppComponent.class);
 	private String hostname;
 	private int socket;
 	
 	private String domainName;
 	private String password;
-	private Properties conf;
+	private Configuration conf;
 	
-	public XmppComponent(Properties conf) {
+	public XmppComponent(Configuration conf) {
 	    setConf(conf);
 		hostname = conf.getProperty("xmpp.host");
 		socket = Integer.valueOf(conf.getProperty("xmpp.port"));
@@ -53,12 +50,11 @@ public class XmppComponent {
 		try {
 			PropertyConfigurator.configure(DATABASE_CONFIGURATION_FILE);
 		} catch (ProxoolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOGGER.fatal("Could not configure proxool db connection", e);
 		}
 	}
 	
-	public void setConf(Properties conf) {
+	public void setConf(Configuration conf) {
 		this.conf = conf;
 	}
 	

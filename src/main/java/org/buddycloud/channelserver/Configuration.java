@@ -23,28 +23,29 @@
 package org.buddycloud.channelserver;
 
 import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Properties;
+
+import org.apache.log4j.Logger;
 
 public class Configuration extends Properties
 {
 	private static final long serialVersionUID = 1L;
+	
+	private static final Logger LOGGER = Logger.getLogger(Configuration.class);
 
 	public static final String CONFIGURATION_SERVER_DOMAIN = "server.domain";
 	public static final String CONFIGURATION_SERVER_CHANNELS_DOMAIN = "server.domain.channels";
 	public static final String CONFIGURATION_SERVER_TOPICS_DOMAIN = "server.domain.topics";
-	
+
+	public static final String CONFIGURATION_XMPP_STANZA_MAXSIZE = "xmpp.stanza.max-size";
+
 	private static final String CONFIGURATION_FILE = "configuration.properties";
 	private static Configuration instance          = null;
-	
-	private Properties conf;
 	
     private Configuration()
     {
     	try {
-	        conf = new Properties();
-	        conf.load(new FileInputStream(CONFIGURATION_FILE));
+	        load(new FileInputStream(CONFIGURATION_FILE));
     	} catch (Exception e) {
             System.out.println(e.getMessage());
             System.exit(1);
@@ -59,18 +60,21 @@ public class Configuration extends Properties
     	return instance;
     }
     
-    public String getProperty(String key)
-    {
-    	return conf.getProperty(key);
+    public Integer getIntegerProperty(final String key) {
+    	try {
+    		return Integer.valueOf(getProperty(key));
+    	} catch(NumberFormatException eNF) {
+    		LOGGER.error("Expected integer for " + key + ", found " + getProperty(key), eNF);
+    		return null;
+    	}
     }
-    
-    public String getProperty(String key, String defaultValue)
-    {
-    	return conf.getProperty(key, defaultValue);
-    }
-    
-    public void load(InputStream inputStream) throws IOException
-    {
-        conf.load(inputStream);
+
+    public Integer getIntegerProperty(final String key, final Integer defaultValue) {
+    	try {
+    		return Integer.valueOf(getProperty(key));
+    	} catch(NumberFormatException eNF) {
+    		LOGGER.error("Expected integer for " + key + ", found " + getProperty(key), eNF);
+    		return null;
+    	}
     }
 }

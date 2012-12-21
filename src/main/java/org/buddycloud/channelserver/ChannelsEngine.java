@@ -22,7 +22,6 @@
 
 package org.buddycloud.channelserver;
 
-import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -51,9 +50,9 @@ public class ChannelsEngine implements Component {
 	private BlockingQueue<Packet> outQueue = new LinkedBlockingQueue<Packet>();
 	private BlockingQueue<Packet> inQueue = new LinkedBlockingQueue<Packet>();
 
-	private Properties conf;
+	private Configuration conf;
 
-	public ChannelsEngine(Properties conf) {
+	public ChannelsEngine(Configuration conf) {
 		this.conf = conf;
 	}
 

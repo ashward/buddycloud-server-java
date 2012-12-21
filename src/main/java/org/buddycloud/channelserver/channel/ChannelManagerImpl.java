@@ -23,7 +23,6 @@
 package org.buddycloud.channelserver.channel;
 
 import java.util.Map;
-import java.util.Properties;
 
 import org.apache.log4j.Logger;
 import org.buddycloud.channelserver.Configuration;
@@ -43,7 +42,7 @@ import org.xmpp.resultsetmanagement.ResultSet;
 public class ChannelManagerImpl implements ChannelManager {
 
 	private final NodeStore nodeStore;
-	private final Properties configuration;
+	private final Configuration configuration;
 
 	@SuppressWarnings("unused")
 	private static final Logger LOGGER = Logger
@@ -59,7 +58,7 @@ public class ChannelManagerImpl implements ChannelManager {
 	 *            the backing {@link NodeStore}.
 	 */
 	public ChannelManagerImpl(final NodeStore nodeStore,
-			final Properties configuration) {
+			final Configuration configuration) {
 		this.nodeStore = nodeStore;
 		this.configuration = configuration;
 	}
@@ -257,5 +256,11 @@ public class ChannelManagerImpl implements ChannelManager {
 	public ResultSet<NodeSubscription> getNodeSubscriptionListeners(
 			String nodeId) throws NodeStoreException {
 		return nodeStore.getNodeSubscriptionListeners(nodeId);
+	}
+
+	@Override
+	public int getMaximumStanzaSize() {
+		// TODO Auto-generated method stub
+		return configuration.getIntegerProperty(Configuration.CONFIGURATION_XMPP_STANZA_MAXSIZE);
 	}
 }

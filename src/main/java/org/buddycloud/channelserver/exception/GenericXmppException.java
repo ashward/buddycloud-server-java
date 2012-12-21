@@ -20,24 +20,32 @@
  * under the License.
  */
 
-package org.buddycloud.channelserver.channel;
+package org.buddycloud.channelserver.exception;
 
-import org.buddycloud.channelserver.Configuration;
-import org.buddycloud.channelserver.db.NodeStoreFactory;
+import org.buddycloud.channelserver.XmppException;
+import org.xmpp.packet.PacketError;
 
-public class ChannelManagerFactoryImpl implements ChannelManagerFactory {
+/**
+ * Represents a defined XMPP error has occurred. The given details will be returned to the originator
+ * if possible as an error stanza.
+ */
+public class GenericXmppException extends XmppException {
 
-	private final Configuration configuration;
-	private final NodeStoreFactory nodeStoreFactory;
+	private final PacketError error;
 	
-	public ChannelManagerFactoryImpl(final Configuration configuration, final NodeStoreFactory nodeStoreFactory) {
-		this.configuration = configuration;
-		this.nodeStoreFactory = nodeStoreFactory;
+	private static final long serialVersionUID = 1L;
+
+	public GenericXmppException(final PacketError.Type type, final PacketError.Condition condition) {
+		super();
+		error = new PacketError(condition, type);
+	}
+
+	public GenericXmppException(final PacketError.Type type, final PacketError.Condition condition, Throwable t) {
+		super(t);
+		error = new PacketError(condition, type);
 	}
 	
-	@Override
-	public ChannelManager create() {
-		return new ChannelManagerImpl(nodeStoreFactory.create(), configuration);
+	public PacketError getPacketError() {
+		return error;
 	}
-
 }
