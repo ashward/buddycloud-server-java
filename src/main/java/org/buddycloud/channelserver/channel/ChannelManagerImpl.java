@@ -50,6 +50,8 @@ public class ChannelManagerImpl implements ChannelManager {
 
 	private static final String INVALID_NODE = "Illegal node format";
 	private static final String REMOTE_NODE = "Illegal remote node";
+	
+	private static final int DEFAULT_XMPP_MAX_STANZA_SIZE = 60000; // bytes
 
 	/**
 	 * Create an instance backed by a {@link NodeStore}.
@@ -261,6 +263,6 @@ public class ChannelManagerImpl implements ChannelManager {
 	@Override
 	public int getMaximumStanzaSize() {
 		// TODO Auto-generated method stub
-		return configuration.getIntegerProperty(Configuration.CONFIGURATION_XMPP_STANZA_MAXSIZE);
+		return configuration.getIntegerProperty(Configuration.CONFIGURATION_XMPP_STANZA_MAXSIZE, DEFAULT_XMPP_MAX_STANZA_SIZE);
 	}
 }
