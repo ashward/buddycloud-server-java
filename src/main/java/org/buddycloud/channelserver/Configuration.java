@@ -71,10 +71,13 @@ public class Configuration extends Properties
 
     public Integer getIntegerProperty(final String key, final Integer defaultValue) {
     	try {
-    		return Integer.valueOf(getProperty(key));
+    		String value = getProperty(key);
+    		if(value != null) {
+    			return Integer.valueOf(getProperty(key));
+    		}
     	} catch(NumberFormatException eNF) {
     		LOGGER.error("Expected integer for " + key + ", found " + getProperty(key), eNF);
-    		return null;
     	}
+		return defaultValue;
     }
 }
