@@ -22,42 +22,39 @@
 
 package org.buddycloud.channelserver;
 
+import java.util.Properties;
+
 import org.apache.log4j.Logger;
 import org.jivesoftware.whack.ExternalComponentManager;
-import org.logicalcobwebs.proxool.ProxoolException;
-import org.logicalcobwebs.proxool.configuration.PropertyConfigurator;
 import org.xmpp.component.ComponentException;
 
-public class XmppComponent {
+public class TopicsComponent {
 
-	private static final String DATABASE_CONFIGURATION_FILE = "db.properties";
-	
-	private static final Logger LOGGER = Logger.getLogger(XmppComponent.class);
+	@SuppressWarnings("unused")
+	private static final Logger logger = Logger.getLogger(TopicsComponent.class);
 	private String hostname;
 	private int socket;
 	
 	private String domain;
 	private String password;
-	private ChannelsEngine channelsEngine;
+	private TopicsEngine topicsEngine;
 	
-	public XmppComponent(Configuration configuration, final String domain) {
+	public TopicsComponent(Properties configuration, String domain) {
+		if (null == domain) {
+			return;
+		}
 		hostname = configuration.getProperty("xmpp.host");
 		socket = Integer.valueOf(configuration.getProperty("xmpp.port"));
 		this.domain = domain;
 		password = configuration.getProperty("xmpp.secretkey");
-		channelsEngine = new ChannelsEngine(configuration);
+		topicsEngine = new TopicsEngine(configuration);
 
-		try {
-			PropertyConfigurator.configure(DATABASE_CONFIGURATION_FILE);
-		} catch (ProxoolException e) {
-			LOGGER.fatal("Could not configure proxool db connection", e);
-		}
 	}
 	
 	public void run() throws ComponentException {
 		ExternalComponentManager manager = new ExternalComponentManager(
 		        hostname, socket);
 		manager.setDefaultSecretKey(password);
-		manager.addComponent(domain, channelsEngine);
+		manager.addComponent(domain, topicsEngine);
 	}
 }
